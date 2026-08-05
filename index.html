@@ -12,8 +12,8 @@
   <meta name="theme-color" content="#4f46e5">
 
   <!-- Dynamisches Web-App Manifest (Data URI) -->
-  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkZhbUZpbmFueiBQcm8iLAogICJzaG9ydF9uYW1lIjogIkZhbUZpbmFueiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzRmNDZlNSIKZX0=">
-
+  <link rel="manifest" href='data:application/json,{"name":"FamFinanz Pro","short_name":"FamFinanz","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#4f46e5"}'>
+  
   <!-- External CDN Dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -1546,7 +1546,7 @@
           saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
       }
 
-      // --- API REQUEST FÜR GITHUB PAGES & LOCALHOST ---
+      // --- ROBUSTE MULTI-PROXY API INTEGRATION (Für GitHub Pages optimiert) ---
       async function updateDepotPrices() {
           const btn = document.getElementById('btn-update-prices');
           const originalHtml = btn.innerHTML;
@@ -1572,24 +1572,58 @@
               return;
           }
 
-          const fetchYahooData = async (targetUrl) => {
-              const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl + '&cb=' + Date.now())}`;
-              
-              const response = await fetch(proxyUrl);
-              if (!response.ok) throw new Error(`Netzwerkfehler: ${response.status}`);
-              
-              const rawData = await response.json();
-              if (rawData && rawData.contents) {
-                  return JSON.parse(rawData.contents);
+          // Hilfsfunktion: Probier der Reihe nach 4 verschiedene Proxy-Dienste durch
+          const fetchYahooDataWithFallback = async (targetUrl) => {
+              const cacheBusterUrl = targetUrl + '&cb=' + Date.now();
+              const proxies = [
+                  // Proxy 1: CorsProxy.io
+                  async (u) => {
+                      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`);
+                      if (!res.ok) throw new Error(`Status ${res.status}`);
+                      return await res.json();
+                  },
+                  // Proxy 2: AllOrigins JSON API
+                  async (u) => {
+                      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
+                      if (!res.ok) throw new Error(`Status ${res.status}`);
+                      const data = await res.json();
+                      if (data && data.contents) return JSON.parse(data.contents);
+                      throw new Error("Leere Antowrt");
+                  },
+                  // Proxy 3: CodeTabs Proxy
+                  async (u) => {
+                      const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`);
+                      if (!res.ok) throw new Error(`Status ${res.status}`);
+                      return await res.json();
+                  },
+                  // Proxy 4: JSONP / Direct AllOrigins Raw
+                  async (u) => {
+                      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
+                      if (!res.ok) throw new Error(`Status ${res.status}`);
+                      return await res.json();
+                  }
+              ];
+
+              for (let i = 0; i < proxies.length; i++) {
+                  try {
+                      console.log(`📡 Teste Proxy-Dienst #${i + 1}...`);
+                      const result = await proxies[i](cacheBusterUrl);
+                      if (result && (result.quoteResponse || result.chart)) {
+                          console.log(`✅ Proxy-Dienst #${i + 1} erfolgreich!`);
+                          return result;
+                      }
+                  } catch (e) {
+                      console.warn(`⚠️ Proxy #${i + 1} abgelehnt:`, e.message);
+                  }
               }
-              throw new Error("Leere Antwort vom Proxy erhalten.");
+              throw new Error("Alle 4 CORS-Proxies haben die Anfrage abgelehnt.");
           };
 
           try {
               const symbolsStr = encodeURIComponent(tickersToFetch.join(','));
               const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}`;
               
-              const data = await fetchYahooData(targetUrl);
+              const data = await fetchYahooDataWithFallback(targetUrl);
               
               if (!data || !data.quoteResponse || !data.quoteResponse.result) {
                   throw new Error('Fehlerhafte oder leere Antwort von Yahoo Finance');
@@ -1617,7 +1651,7 @@
                   const fxTargetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${fxSymbolsStr}`;
                   
                   try {
-                      const fxData = await fetchYahooData(fxTargetUrl);
+                      const fxData = await fetchYahooDataWithFallback(fxTargetUrl);
                       if (fxData && fxData.quoteResponse && fxData.quoteResponse.result) {
                           fxData.quoteResponse.result.forEach(fxRes => {
                               const baseCurrency = fxRes.symbol.replace('EUR=X', '');
@@ -1687,7 +1721,6 @@
           
           lucide.createIcons();
       }
-
       function updateDepotTimestamp() {
           const el = document.getElementById('depot-last-update');
           if(el) {
