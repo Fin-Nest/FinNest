@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FamFinanz Pro</title>
+
+  <!-- PWA & Mobile Web-App Meta-Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FamFinanz Pro">
+  <meta name="theme-color" content="#4f46e5">
+
+  <!-- Dynamisches Web-App Manifest (Data URI) -->
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkZhbUZpbmFueiBQcm8iLAogICJzaG9ydF9uYW1lIjogIkZhbUZpbmFueiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzRmNDZlNSIKZX0=">
+
+  <!-- External CDN Dependencies -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+  <style>
+      body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          background-color: #f8fafc;
+      }
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+      .th-tab-active { border-bottom: 3px solid #4f46e5; color: #4f46e5; font-weight: 600; }
+      .th-tooltip {
+          position: absolute; background: rgba(255, 255, 255, 0.98); border: 1px solid #e2e8f0;
+          border-radius: 12px; padding: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+          pointer-events: none; font-size: 13px; min-width: 280px; z-index: 100; transition: all 0.1s ease;
+      }
+      @media print {
+          body * { visibility: hidden; }
+          #app-wrapper, #app-wrapper * { visibility: visible; }
+          #app-wrapper { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; overflow: visible !important; }
+          button, .no-print { display: none !important; }
+      }
+  </style>
+</head>
+<body class="text-slate-900 antialiased h-screen overflow-hidden flex flex-col">
+
+  <!-- DATALISTS FOR DROPDOWNS -->
+  <datalist id="insurance-types">
+      <option value="Berufsunfähigkeit"></option>
+      <option value="Elementar"></option>
+      <option value="Haftpflicht"></option>
+      <option value="Hausrat"></option>
+      <option value="KFZ"></option>
+      <option value="Rechtsschutz"></option>
+      <option value="Risikolebensversicherung"></option>
+      <option value="Unfall"></option>
+      <option value="Zahnzusatz"></option>
+  </datalist>
+  <datalist id="leisure-clusters">
+      <option value="Hobby"></option>
+      <option value="Internet & TV"></option>
+      <option value="Mode"></option>
+      <option value="Sport"></option>
+      <option value="Strom"></option>
+      <option value="Urlaub"></option>
+  </datalist>
+  <datalist id="depot-types">
+      <option value="Aktie"></option>
+      <option value="Anleihe"></option>
+      <option value="ETF"></option>
+      <option value="Fonds"></option>
+      <option value="Krypto"></option>
+      <option value="Sonstiges"></option>
+  </datalist>
+
+  <!-- LOCK SCREEN (TRESOR) -->
+  <div id="lock-screen" class="hidden fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-4">
+      <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+          <div class="mx-auto w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
+              <i data-lucide="lock" class="w-7 h-7"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-800 mb-2">Tresor gesperrt</h2>
+          <p class="text-slate-500 text-sm mb-6">Bitte gib dein Masterpasswort ein, um deine lokalen Finanzdaten zu entschlüsseln.</p>
+          
+          <input type="password" id="unlock-pwd" placeholder="Masterpasswort" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-indigo-600 mb-2 text-center text-lg tracking-widest" onkeypress="if(event.key === 'Enter') unlockApp()">
+          <p id="unlock-error" class="text-rose-500 text-xs font-medium h-4 mb-4 hidden">Passwort inkorrekt oder Daten korrupt.</p>
+          
+          <button onclick="unlockApp()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-sm">
+              Entschlüsseln & Öffnen
+          </button>
+      </div>
+  </div>
+
+  <!-- MAIN APP WRAPPER -->
+  <div id="app-wrapper" class="hidden flex-1 flex flex-col md:flex-row h-full overflow-hidden relative">
+      
+      <!-- MOBILE TOP HEADER (Nur auf Handys sichtbar) -->
+      <header class="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-30 flex-shrink-0">
+          <div class="flex items-center gap-2">
+              <div class="p-1.5 bg-indigo-600 rounded-lg text-white">
+                  <i data-lucide="wallet" class="w-5 h-5"></i>
+              </div>
+              <span class="font-semibold text-slate-800">FamFinanz Pro</span>
+          </div>
+          <button onclick="toggleMobileSidebar()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg focus:outline-none">
+              <i data-lucide="menu" class="w-6 h-6"></i>
+          </button>
+      </header>
+
+      <!-- BACKDROP FOR MOBILE SIDEBAR -->
+      <div id="mobile-backdrop" onclick="toggleMobileSidebar()" class="hidden md:hidden fixed inset-0 bg-slate-900/50 z-30 transition-opacity"></div>
+
+      <!-- SIDEBAR NAVIGATION (Desktop: dauerhaft | Mobile: Slide-Over) -->
+      <aside id="sidebar-nav" class="fixed md:relative inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out w-64 bg-white border-r border-slate-200 flex flex-col justify-between flex-shrink-0 z-40 h-full">
+          <div class="p-6 overflow-y-auto">
+              <div class="hidden md:flex items-center gap-3 mb-8">
+                  <div class="p-2 bg-indigo-600 rounded-xl text-white">
+                      <i data-lucide="wallet" class="w-6 h-6"></i>
+                  </div>
+                  <span class="text-xl font-semibold tracking-tight">FamFinanz Pro</span>
+              </div>
+              
+              <nav class="space-y-1">
+                  <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all bg-indigo-50 text-indigo-700">
+                      <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+                  </button>
+                  <button onclick="switchTab('income')" id="nav-income" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="arrow-up-right" class="w-4 h-4"></i> Einnahmen
+                  </button>
+                  <button onclick="switchTab('expenses')" id="nav-expenses" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="arrow-down-left" class="w-4 h-4"></i> Ausgaben
+                  </button>
+                  <button onclick="switchTab('assets')" id="nav-assets" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="line-chart" class="w-4 h-4"></i> Vermögen & Schulden
+                  </button>
+                  <button onclick="switchTab('salary')" id="nav-salary" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="trending-up" class="w-4 h-4"></i> Gehaltsentwicklung
+                  </button>
+                  <button onclick="switchTab('immo')" id="nav-immo" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="home" class="w-4 h-4"></i> Immobilienkauf
+                  </button>
+                  <button onclick="switchTab('children')" id="nav-children" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="baby" class="w-4 h-4"></i> <span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span>
+                  </button>
+                  <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="user-cog" class="w-4 h-4"></i> Personalisierung
+                  </button>
+              </nav>
+          </div>
+          
+          <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+              <button onclick="generateFinancialReportPDF(this)" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl shadow-sm transition-all">
+                  <i data-lucide="file-text" class="w-4 h-4"></i> Aktuellen Reiter als PDF
+              </button>
+              <div class="grid grid-cols-2 gap-2">
+                  <button onclick="exportStateToFile()" class="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl shadow-2xs transition-all">
+                      <i data-lucide="download" class="w-3.5 h-3.5 text-indigo-600"></i> Sichern
+                  </button>
+                  <label class="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl shadow-2xs cursor-pointer transition-all">
+                      <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-600"></i> Laden
+                      <input type="file" id="import-file-input" onchange="importStateFromFile(event)" class="hidden">
+                  </label>
+              </div>
+          </div>
+      </aside>
+
+      <!-- MAIN CONTENT AREA -->
+      <main class="flex-1 overflow-y-auto p-4 md:p-10 relative">
+          
+          <!-- TAB: DASHBOARD -->
+          <div id="tab-dashboard" class="space-y-8">
+              <div>
+                  <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Finanz-Dashboard</h1>
+                  <p class="text-slate-500 mt-1 text-sm md:text-base">Lokal gesicherte Haushalts- und Vermögenswerte mit Eigentums-Splitting.</p>
+              </div>
+
+              <!-- KPI GRID -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 dashboard-kpi-grid">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break">
+                      <div class="flex justify-between items-center text-slate-400 mb-2">
+                          <span class="text-sm font-medium">Gesamt-Einnahmen (Monat)</span>
+                          <i data-lucide="trending-up" class="w-5 h-5 text-emerald-500"></i>
+                      </div>
+                      <span id="kpi-income" class="text-2xl font-bold text-emerald-500">0,00 €</span>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break">
+                      <div class="flex justify-between items-center text-slate-400 mb-2">
+                          <span class="text-sm font-medium">Gesamt-Ausgaben (Monat)</span>
+                          <i data-lucide="trending-down" class="w-5 h-5 text-rose-500"></i>
+                      </div>
+                      <span id="kpi-expenses" class="text-2xl font-bold text-rose-500">0,00 €</span>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break bg-indigo-50/50">
+                      <div class="flex justify-between items-center text-indigo-500 mb-2">
+                          <span class="text-sm font-bold" id="kpi-assets-label">Nettovermögen (Net Worth)</span>
+                          <i data-lucide="landmark" class="w-5 h-5"></i>
+                      </div>
+                      <span id="kpi-assets" class="text-2xl font-bold text-indigo-900">0,00 €</span>
+                  </div>
+              </div>
+
+              <!-- SPLIT TABLE -->
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                  <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Gezielte Eigentums- & Verantworter-Struktur</h3>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left text-sm border-collapse min-w-[500px]">
+                          <thead>
+                              <tr class="border-b border-slate-200 text-slate-400 font-medium text-xs bg-slate-50/50">
+                                  <th class="p-3">Finanzsektor</th>
+                                  <th class="p-3 text-right text-indigo-600 font-semibold bg-indigo-50/30 rounded-t-lg"><span class="lbl-husband-name">Ehemann</span></th>
+                                  <th class="p-3 text-right text-emerald-600 font-semibold bg-emerald-50/30 rounded-t-lg"><span class="lbl-wife-name">Ehefrau</span></th>
+                                  <th class="p-3 text-right text-slate-600 font-semibold bg-slate-100/50 rounded-t-lg">Gemeinsame Töpfe</th>
+                              </tr>
+                          </thead>
+                          <tbody class="divide-y divide-slate-100">
+                              <tr>
+                                  <td class="p-3 font-medium text-slate-600">Monatliche Einnahmen</td>
+                                  <td id="split-inc-husband" class="p-3 text-right font-semibold bg-indigo-50/10">0,00 €</td>
+                                  <td id="split-inc-wife" class="p-3 text-right font-semibold bg-emerald-50/10">0,00 €</td>
+                                  <td id="split-inc-both" class="p-3 text-right font-semibold bg-slate-50/30">0,00 €</td>
+                              </tr>
+                              <tr>
+                                  <td class="p-3 font-medium text-slate-600">Monatliche Ausgaben</td>
+                                  <td id="split-exp-husband" class="p-3 text-right font-semibold text-rose-600 bg-indigo-50/10">0,00 €</td>
+                                  <td id="split-exp-wife" class="p-3 text-right font-semibold text-rose-600 bg-emerald-50/10">0,00 €</td>
+                                  <td id="split-exp-both" class="p-3 text-right font-semibold text-rose-600 bg-slate-50/30">0,00 €</td>
+                              </tr>
+                              <tr class="bg-slate-50/30">
+                                  <td class="p-3 font-medium text-slate-600">Brutto-Vermögen (Assets)</td>
+                                  <td id="split-ast-husband" class="p-3 text-right font-medium text-slate-700 bg-indigo-50/20">0,00 €</td>
+                                  <td id="split-ast-wife" class="p-3 text-right font-medium text-slate-700 bg-emerald-50/20">0,00 €</td>
+                                  <td id="split-ast-both" class="p-3 text-right font-medium text-slate-700 bg-slate-100/50">0,00 €</td>
+                              </tr>
+                              <tr class="bg-rose-50/10">
+                                  <td class="p-3 font-medium text-slate-600">Verbindlichkeiten (Schulden)</td>
+                                  <td id="split-lia-husband" class="p-3 text-right font-medium text-rose-600 bg-indigo-50/20">0,00 €</td>
+                                  <td id="split-lia-wife" class="p-3 text-right font-medium text-rose-600 bg-emerald-50/20">0,00 €</td>
+                                  <td id="split-lia-both" class="p-3 text-right font-medium text-rose-600 bg-slate-100/50">0,00 €</td>
+                              </tr>
+                              <tr class="bg-indigo-50/20 border-t-2 border-indigo-100">
+                                  <td class="p-3 font-bold text-indigo-900">Reinvermögen (Net Worth)</td>
+                                  <td id="split-net-husband" class="p-3 text-right font-bold text-indigo-900 bg-indigo-50/40 rounded-b-lg">0,00 €</td>
+                                  <td id="split-net-wife" class="p-3 text-right font-bold text-indigo-900 bg-emerald-50/40 rounded-b-lg">0,00 €</td>
+                                  <td id="split-net-both" class="p-3 text-right font-bold text-indigo-900 bg-indigo-100/40 rounded-b-lg">0,00 €</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <!-- CHARTS -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 dashboard-chart-grid">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Monatlicher Cashflow</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartCashflow"></canvas>
+                      </div>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Detaillierte Kostenstruktur (Monat)</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartExpenseStructure"></canvas>
+                      </div>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Struktur Brutto-Vermögen</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartAssetAllocation"></canvas>
+                      </div>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depot-Aufteilung (Einzelwerte)</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartDepotAllocation"></canvas>
+                      </div>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2"><span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span> Gesamtausgaben</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartChildren"></canvas>
+                      </div>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Historische Gehaltsentwicklung (Brutto)</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartSalaryHistory"></canvas>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: EINNAHMEN -->
+          <div id="tab-income" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Einnahmen-Verwaltung</h2>
+                  <p class="text-slate-500">Erfasse Netto-Bezüge sowie feingliedrige Kapitalerträge.</p>
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-1 avoid-break">
+                      <h3 class="text-lg font-semibold text-slate-700 flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span><i data-lucide="user-check" class="text-emerald-500 inline"></i> Feste Bezüge</span>
+                          <span id="sum-inc-fixed" class="text-xs font-normal text-slate-400 mt-1 sm:mt-0"></span>
+                      </h3>
+                      <div class="space-y-3">
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Netto-Jahresgehalt <span class="lbl-husband-name">Ehemann</span> (€ / Jahr)</label>
+                              <input type="text" id="inc-husband-annual" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Netto-Jahresgehalt <span class="lbl-wife-name">Ehefrau</span> (€ / Jahr)</label>
+                              <input type="text" id="inc-wife-annual" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Staatliches Kindergeld (€ / Jahr)</label>
+                              <input type="text" id="inc-kindergeld" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Jahres-Elterngeld <span class="lbl-husband-name">Ehemann</span> (€ / Jahr)</label>
+                              <input type="text" id="inc-elterngeld-husband" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Jahres-Elterngeld <span class="lbl-wife-name">Ehefrau</span> (€ / Jahr)</label>
+                              <input type="text" id="inc-elterngeld-wife" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Sonstiges Einkommen (€ / Jahr)</label>
+                              <input type="text" id="inc-other" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600">
+                          </div>
+                      </div>
+                  </div>
+
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-2 avoid-break">
+                      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                          <h3 class="text-lg font-semibold text-slate-700 flex flex-col xl:flex-row xl:items-center gap-2">
+                              <span><i data-lucide="percent" class="text-emerald-500 inline"></i> Dynamische Kapitalerträge</span>
+                              <span id="sum-inc-cap" class="text-xs font-normal text-slate-400 mt-1 xl:mt-0"></span>
+                          </h3>
+                          <div class="flex items-center gap-4">
+                              <label class="flex items-center gap-2 text-[11px] text-slate-600 font-semibold cursor-pointer bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                                  <input type="checkbox" id="set-tax-cg" onchange="updateTaxSetting()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600">
+                                  Abgeltungssteuer (26,375%) abziehen
+                              </label>
+                              <button onclick="addCapitalGain()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                              </button>
+                          </div>
+                      </div>
+                      <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse min-w-[500px]">
+                              <thead>
+                                  <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('capitalGains', 'type')">Kategorie <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('capitalGains', 'name')">Bezeichnung <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                      <th class="pb-3 font-medium w-1/5 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('capitalGains', 'value')">Brutto-Ertrag (€/ Jahr) <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 text-right">Aktion</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="capital-gains-table-body"></tbody>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: AUSGABEN -->
+          <div id="tab-expenses" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Ausgaben-Verwaltung</h2>
+                  <p class="text-slate-500">Aufschlüsselung der Kosten inklusive präziser Zuordnung der Verantwortlichkeiten.</p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                      <h3 class="text-lg font-semibold text-slate-700 flex flex-col xl:flex-row xl:items-center gap-2">
+                          <span><i data-lucide="home" class="text-rose-500 inline"></i> Wohnen & Lebenshaltung</span>
+                          <span id="sum-exp-wohnen" class="text-xs font-normal text-slate-400 mt-1 xl:mt-0"></span>
+                      </h3>
+                      <div class="space-y-4">
+                          <div class="grid grid-cols-3 gap-2 items-center">
+                              <label class="text-xs font-medium text-slate-500 col-span-1">Miete / Wohnen</label>
+                              <select id="exp-rent-owner" onchange="updateFinanceData()" class="px-2 py-1 border border-slate-200 bg-slate-50 text-xs rounded-lg select-owner-target"></select>
+                              <input type="text" id="exp-rent" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="px-4 py-1.5 text-right border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm">
+                          </div>
+                          <div class="grid grid-cols-3 gap-2 items-center">
+                              <label class="text-xs font-medium text-slate-500 col-span-1">Haushalt & Essen</label>
+                              <select id="exp-household-owner" onchange="updateFinanceData()" class="px-2 py-1 border border-slate-200 bg-slate-50 text-xs rounded-lg select-owner-target"></select>
+                              <input type="text" id="exp-household" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="px-4 py-1.5 text-right border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm">
+                          </div>
+                      </div>
+                  </div>
+
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                      <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                          <h3 class="text-lg font-semibold text-slate-700 flex flex-col xl:flex-row xl:items-center gap-2">
+                              <span><i data-lucide="piggy-bank" class="text-emerald-500 inline"></i> Vorsorge & Invest</span>
+                              <span id="sum-exp-vorsorge" class="text-xs font-normal text-slate-400 mt-1 xl:mt-0"></span>
+                          </h3>
+                          <button onclick="addInvestment()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                          </button>
+                      </div>
+                      <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse min-w-[500px]">
+                              <thead>
+                                  <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('investments', 'type')">Typ <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('investments', 'name')">Bezeichnung <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                      <th class="pb-3 font-medium w-1/5 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('investments', 'value')">Sparrate <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 text-right">Aktion</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="investment-table-body"></tbody>
+                          </table>
+                      </div>
+                  </div>
+
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                      <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                          <h3 class="text-lg font-semibold text-slate-700 flex flex-col xl:flex-row xl:items-center gap-2">
+                              <span><i data-lucide="shield-alert" class="text-rose-500 inline"></i> Versicherungen</span>
+                              <span id="sum-exp-vers" class="text-xs font-normal text-slate-400 mt-1 xl:mt-0"></span>
+                          </h3>
+                          <button onclick="addInsurance()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                          </button>
+                      </div>
+                      <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse min-w-[500px]">
+                              <thead>
+                                  <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('insurances', 'type')">Art <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('insurances', 'provider')">Anbieter <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                      <th class="pb-3 font-medium w-1/5 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('insurances', 'value')">Kosten <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 text-right">Aktion</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="insurance-table-body"></tbody>
+                          </table>
+                      </div>
+                  </div>
+
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                      <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                          <h3 class="text-lg font-semibold text-slate-700 flex flex-col xl:flex-row xl:items-center gap-2">
+                              <span><i data-lucide="car" class="text-rose-500 inline"></i> Auto & Mobilität</span>
+                              <span id="sum-exp-auto" class="text-xs font-normal text-slate-400 mt-1 xl:mt-0"></span>
+                          </h3>
+                          <button onclick="addCarExpense()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                          </button>
+                      </div>
+                      <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse min-w-[500px]">
+                              <thead>
+                                  <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('carExpenses', 'type')">Kostenart <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('carExpenses', 'desc')">Details <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                      <th class="pb-3 font-medium w-1/5 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('carExpenses', 'value')">Kosten <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 text-right">Aktion</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="car-table-body"></tbody>
+                          </table>
+                      </div>
+                  </div>
+
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex-1 md:col-span-2 avoid-break">
+                      <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                          <h3 class="text-lg font-semibold text-slate-700 flex flex-col xl:flex-row xl:items-center gap-2">
+                              <span><i data-lucide="palmtree" class="text-rose-500 inline"></i> Freizeit & Alltag</span>
+                              <span id="sum-exp-freizeit" class="text-xs font-normal text-slate-400 mt-1 xl:mt-0"></span>
+                          </h3>
+                          <button onclick="addLeisureExpense()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                          </button>
+                      </div>
+                      <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse min-w-[500px]">
+                              <thead>
+                                  <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('leisureExpenses', 'type')">Cluster <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('leisureExpenses', 'desc')">Beschreibung <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                      <th class="pb-3 font-medium w-1/5 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('leisureExpenses', 'value')">Kosten <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                      <th class="pb-3 text-right">Aktion</th>
+                                  </tr>
+                              </thead>
+                              <tbody id="leisure-table-body"></tbody>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: VERMÖGEN & DEPOT & SCHULDEN -->
+          <div id="tab-assets" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Vermögenswerte & Verbindlichkeiten</h2>
+                  <p class="text-slate-500">Verwalte liquide Konten, Wertpapiere, Immobilien sowie laufende Kredite für die Net-Worth-Berechnung.</p>
+              </div>
+
+              <!-- Immobilienbestand -->
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                  <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                      <h3 class="text-lg font-semibold flex flex-col md:flex-row md:items-center gap-2">
+                          <span><i data-lucide="building" class="text-indigo-600 inline"></i> Immobilienbestand</span>
+                          <span id="sum-ast-immo" class="text-xs font-normal text-slate-400 mt-1 md:mt-0"></span>
+                      </h3>
+                      <button onclick="addRealEstate()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                      </button>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('realestate', 'name')">Objektbezeichnung <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                  <th class="pb-3 font-medium w-1/4 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('realestate', 'value')">Marktwert (Asset) <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 text-right">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="realestate-table-body"></tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <!-- Verbindlichkeiten -->
+              <div class="bg-white p-6 rounded-2xl border border-rose-200 shadow-sm space-y-4 avoid-break">
+                  <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                      <h3 class="text-lg font-semibold flex flex-col md:flex-row md:items-center gap-2 text-rose-700">
+                          <span><i data-lucide="credit-card" class="text-rose-500 inline"></i> Verbindlichkeiten & Kredite</span>
+                          <span id="sum-lia" class="text-xs font-normal text-rose-400 mt-1 md:mt-0"></span>
+                      </h3>
+                      <button onclick="addLiability()" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white text-xs font-medium rounded-lg hover:bg-rose-700 transition-all">
+                          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                      </button>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                              <tr class="border-b border-rose-100 text-rose-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium w-1/6 cursor-pointer hover:text-rose-600 transition-colors" onclick="sortTable('liabilities', 'type')">Art <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-rose-600 transition-colors" onclick="sortTable('liabilities', 'name')">Gläubiger / Zweck <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                  <th class="pb-3 font-medium w-1/4 text-right cursor-pointer hover:text-rose-600 transition-colors" onclick="sortTable('liabilities', 'value')">Restschuld (Liability) <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 text-right">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="liabilities-table-body"></tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <!-- Tagesgeld -->
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                  <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                      <h3 class="text-lg font-semibold flex flex-col md:flex-row md:items-center gap-2">
+                          <span><i data-lucide="piggy-bank" class="text-indigo-600 inline"></i> Tagesgeld-Konten</span>
+                          <span id="sum-ast-tg" class="text-xs font-normal text-slate-400 mt-1 md:mt-0"></span>
+                      </h3>
+                      <button onclick="addTagesgeld()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                      </button>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('tagesgeld', 'bank')">Bankinstitut <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium w-1/6 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('tagesgeld', 'interest')">Zins (% p.a.) <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                  <th class="pb-3 font-medium w-1/4 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('tagesgeld', 'value')">Guthaben <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 text-right">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="tagesgeld-table-body"></tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <!-- Festgeld -->
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                  <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                      <h3 class="text-lg font-semibold flex flex-col md:flex-row md:items-center gap-2">
+                          <span><i data-lucide="lock" class="text-indigo-600 inline"></i> Festgeld-Anlagen</span>
+                          <span id="sum-ast-fg" class="text-xs font-normal text-slate-400 mt-1 md:mt-0"></span>
+                      </h3>
+                      <button onclick="addFestgeld()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                      </button>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('festgeld', 'bank')">Bankinstitut <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium w-1/6 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('festgeld', 'interest')">Zins (% p.a.) <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 font-medium w-1/4">Zuordnung</th>
+                                  <th class="pb-3 font-medium w-1/4 text-right cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('festgeld', 'value')">Anlagebetrag <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+                                  <th class="pb-3 text-right">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="festgeld-table-body"></tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <!-- WERTPAPIER-DEPOT -->
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+                  <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
+                      <div class="flex flex-col">
+                          <h3 class="text-lg font-semibold flex items-center gap-2">
+                              <span><i data-lucide="candlestick-chart" class="text-indigo-600 inline"></i> Wertpapierdepot</span>
+                              <span id="sum-ast-depot" class="text-xs font-normal text-slate-400"></span>
+                          </h3>
+                          <span id="depot-last-update" class="text-[10px] text-slate-400 font-medium ml-7 mt-0.5">Letzter Stand: Lade...</span>
+                      </div>
+                      <div class="flex gap-2 flex-wrap">
+                          <button onclick="updateDepotPrices()" id="btn-update-prices" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm">
+                              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren
+                          </button>
+                          <button onclick="exportDepotCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all">
+                              <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
+                          </button>
+                          <button onclick="addDepotAsset()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Hinzufügen
+                          </button>
+                      </div>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[800px]">
+                          <thead>
+                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'type')">Typ</th>
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('depot', 'name')">Bezeichnung</th>
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'bank')">Bank / Broker</th>
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'ticker')">Ticker</th>
+                                  <th class="pb-3 font-medium w-24">Zuordnung</th>
+                                  <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'anzahl')">Stückzahl</th>
+                                  <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'kaufpreis')">Kaufkurs</th>
+                                  <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'aktuellerPreis')">Akt. Kurs</th>
+                                  <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-36" onclick="sortTable('depot', 'value')">Gesamtwert & Perf.</th>
+                                  <th class="pb-3 text-right w-10">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="depot-table-body"></tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <!-- Projektion -->
+              <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8 projection-container avoid-break">
+                  <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+                      <h3 class="text-lg font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                          <i data-lucide="line-chart" class="text-indigo-600"></i> Segmentierte Vermögensprojektion (Assets) & Kaufkraft
+                      </h3>
+                  </div>
+                  <div class="grid grid-cols-1 lg:grid-cols-12 projection-grid">
+                      <div class="lg:col-span-4 bg-slate-50/50 p-6 border-r border-slate-200 space-y-4 projection-inputs">
+                          <div class="space-y-3 bg-white p-4 rounded-xl border border-slate-100 shadow-2xs">
+                              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Rendite-Erwartungen (% p.a.)</span>
+                              <div>
+                                  <label class="block text-[11px] font-medium text-slate-500 mb-0.5">Mittelwert Tagesgeld</label>
+                                  <input type="number" id="proj-return-tg" step="0.1" value="2.5" onchange="updateCalculationsAndCharts()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-indigo-600 font-semibold text-xs">
+                              </div>
+                              <div>
+                                  <label class="block text-[11px] font-medium text-slate-500 mb-0.5">Mittelwert Festgeld</label>
+                                  <input type="number" id="proj-return-fg" step="0.1" value="3.5" onchange="updateCalculationsAndCharts()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-indigo-600 font-semibold text-xs">
+                              </div>
+                              <div>
+                                  <label class="block text-[11px] font-medium text-slate-500 mb-0.5">Rendite Depot (Aktien/ETF)</label>
+                                  <input type="number" id="proj-return-depot" step="0.1" value="6.0" onchange="updateCalculationsAndCharts()" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-indigo-600 font-semibold text-xs">
+                              </div>
+                          </div>
+                          <div>
+                              <label class="block text-xs font-semibold text-slate-500 mb-1">Angenommene Inflation (% p.a.)</label>
+                              <input type="number" id="proj-inflation" step="0.1" value="2.0" onchange="updateCalculationsAndCharts()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-semibold text-sm">
+                          </div>
+                      </div>
+                      <div class="lg:col-span-8 p-6 h-80 relative projection-chart w-full">
+                          <canvas id="chartWealthProjection"></canvas>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: GEHALTSENTWICKLUNG -->
+          <div id="tab-salary" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Historische Gehaltsentwicklung</h2>
+                  <p class="text-slate-500">Erfasse Brutto-Gehälter und deren Bestandteile im Zeitverlauf für die Dashboard-Analyse.</p>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <h3 class="text-lg font-semibold text-slate-700">Neuen Eintrag anlegen (oder bearbeiten)</h3>
+                  <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Zuordnung</label>
+                              <select id="sal-owner" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm bg-white">
+                                  <option value="husband" class="lbl-husband-name">Ehemann</option>
+                                  <option value="wife" class="lbl-wife-name">Ehefrau</option>
+                              </select>
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Firma / Arbeitgeber</label>
+                              <input type="text" id="sal-company" placeholder="z. B. Muster GmbH" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Gültig von (MM/YY)</label>
+                              <input type="text" id="sal-start" placeholder="01/24" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Gültig bis (MM/YY, leer = heute)</label>
+                              <input type="text" id="sal-end" placeholder="leer = heute" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm">
+                          </div>
+                      </div>
+                      
+                      <div class="border-t border-slate-200 pt-4 mb-4">
+                          <div class="flex justify-between items-center mb-2">
+                              <label class="block text-xs font-bold text-slate-600 uppercase">Gehaltsbestandteile (€ / Jahr)</label>
+                              <button onclick="addSalComponentRow()" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200 font-medium">+ Zeile</button>
+                          </div>
+                          <div id="sal-components-container" class="space-y-2"></div>
+                          <div class="mt-3 flex justify-end items-center gap-4 border-t border-slate-200 pt-3">
+                              <span class="text-sm font-semibold text-slate-500">Jahresbrutto gesamt:</span>
+                              <span id="sal-calc-total" class="text-lg font-bold text-indigo-700">0,00 €</span>
+                          </div>
+                      </div>
+
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Kommentar (Optional)</label>
+                          <input type="text" id="sal-comment" placeholder="z. B. Beförderung Senior" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 text-sm">
+                      </div>
+
+                      <div class="mt-4 flex justify-end">
+                          <button onclick="saveSalaryEntry()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-sm">Gehalt speichern</button>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <h3 class="text-lg font-semibold text-slate-700">Erfasste Historien</h3>
+                  <div class="space-y-6">
+                      <div>
+                          <h4 class="text-sm font-bold text-indigo-700 mb-2 border-b border-slate-100 pb-1">Verlauf: <span class="lbl-husband-name">Ehemann</span></h4>
+                          <div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse min-w-[500px]"><thead class="text-slate-400"><tr><th class="pb-2">Zeitraum</th><th class="pb-2">Firma</th><th class="pb-2">Details</th><th class="pb-2 text-right">Jahresbrutto</th><th class="pb-2 text-right">Aktion</th></tr></thead><tbody id="sal-table-husband"></tbody></table></div>
+                      </div>
+                      <div>
+                          <h4 class="text-sm font-bold text-emerald-700 mb-2 border-b border-slate-100 pb-1">Verlauf: <span class="lbl-wife-name">Ehefrau</span></h4>
+                          <div class="overflow-x-auto"><table class="w-full text-left text-xs border-collapse min-w-[500px]"><thead class="text-slate-400"><tr><th class="pb-2">Zeitraum</th><th class="pb-2">Firma</th><th class="pb-2">Details</th><th class="pb-2 text-right">Jahresbrutto</th><th class="pb-2 text-right">Aktion</th></tr></thead><tbody id="sal-table-wife"></tbody></table></div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: IMMOBILIENKAUF & RECHNER -->
+          <div id="tab-immo" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Planung Immobilienkauf & Tilgungsrechner</h2>
+                  <p class="text-slate-500">Kalkuliere Kredittilgungen basierend auf der tragbaren Haushalts-Last.</p>
+              </div>
+
+              <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 xl:col-span-1 avoid-break">
+                      <h3 class="text-lg font-semibold text-indigo-700 flex items-center gap-2"><i data-lucide="sliders"></i> Finanzierungsrahmen</h3>
+                      <div class="space-y-3">
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Angenommener Sollzins (% p.a.)</label>
+                              <input type="number" id="immo-sollzins" step="0.01" value="3.69" onchange="updateFinanceData()" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Gewünschte Tilgung (% p.a.)</label>
+                              <input type="number" id="immo-tilgung" step="0.01" value="1.4" onchange="updateFinanceData()" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Sicherheitsreserve (€)</label>
+                              <input type="text" id="immo-reserve" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateFinanceData();" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium">
+                          </div>
+                      </div>
+                      <div class="space-y-3 bg-slate-50 p-4 rounded-xl text-sm mt-4">
+                          <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer border-b border-slate-200 pb-2">
+                              <input type="checkbox" id="immo-ek-toggle" onchange="toggleImmoEK()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600">
+                              Immobilienbestand in Eigenkapital einrechnen
+                          </label>
+                          <div class="flex justify-between">
+                              <span class="text-slate-500">Verfügbares Eigenkapital:</span>
+                              <span id="immo-calc-ek" class="font-semibold text-slate-800">0,00 €</span>
+                          </div>
+                          <div class="flex justify-between">
+                              <span class="text-slate-500">Tragbare Last (mtl.):</span>
+                              <span id="immo-calc-tragbarkeit" class="font-semibold text-emerald-600">0,00 €</span>
+                          </div>
+                          <div class="border-t border-slate-200 pt-2 flex flex-col">
+                              <span class="text-xs text-slate-400 uppercase font-semibold">Max. Darlehenssumme:</span>
+                              <span id="immo-calc-max-loan" class="text-xl font-bold text-indigo-600">0,00 €</span>
+                          </div>
+                          <div class="border-t border-slate-200 pt-2 flex flex-col mt-2">
+                              <span class="text-xs text-slate-400 uppercase font-semibold">Max. möglicher Kaufpreis:</span>
+                              <span id="immo-calc-max-kaufpreis" class="text-xl font-bold text-emerald-600">0,00 €</span>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div class="xl:col-span-2 space-y-4 avoid-break">
+                      <div class="flex justify-between items-center">
+                          <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="copy"></i> Kaufobjekt-Szenarien</h3>
+                          <button onclick="addImmoScenario()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-xl hover:bg-indigo-700 transition-all shadow-sm">
+                              <i data-lucide="plus" class="w-4 h-4"></i> Hinzufügen
+                          </button>
+                      </div>
+                      <div id="immo-scenarios-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                  </div>
+              </div>
+
+              <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8 avoid-break">
+                  <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+                      <h3 class="text-lg font-bold tracking-tight text-slate-800 flex items-center gap-2">
+                          <i data-lucide="calculator" class="text-indigo-600"></i> Integrierter Tilgungsrechner
+                      </h3>
+                  </div>
+                  <div class="grid grid-cols-1 lg:grid-cols-12">
+                      <div class="lg:col-span-4 bg-slate-50/50 p-6 border-r border-slate-200 space-y-6">
+                          <div class="flex border-b border-slate-200 text-sm">
+                              <button onclick="setThModus('rate')" id="th-tab-rate" class="flex-1 text-center pb-3 text-slate-500 hover:text-slate-800 transition-all font-medium">Rate</button>
+                              <button onclick="setThModus('laufzeit')" id="th-tab-laufzeit" class="flex-1 text-center pb-3 th-tab-active transition-all">Gesamtlaufzeit</button>
+                          </div>
+                          <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                              <span class="text-xs font-medium text-slate-600">Innerhalb der Sollzinsbindung abbezahlen</span>
+                              <label class="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" id="th-volltilger" onchange="toggleVolltilger()" class="sr-only peer">
+                                  <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                              </label>
+                          </div>
+                          <div class="space-y-4">
+                              <div id="th-wrapper-laufzeit">
+                                  <label class="block text-xs font-semibold text-slate-500 mb-1">Gewünschte Gesamtlaufzeit</label>
+                                  <select id="th-laufzeit" onchange="updateThCalculations()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                                      <option value="15">15 Jahre</option><option value="20">20 Jahre</option><option value="25">25 Jahre</option><option value="30">30 Jahre</option><option value="35" selected>35 Jahre</option><option value="40">40 Jahre</option>
+                                  </select>
+                              </div>
+                              <div id="th-wrapper-rate" class="hidden">
+                                  <label class="block text-xs font-semibold text-slate-500 mb-1">Gewünschte Monatsrate (€)</label>
+                                  <input type="text" id="th-rate" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                              </div>
+                              <div>
+                                  <label class="block text-xs font-semibold text-slate-500 mb-1">Sollzinsbindung</label>
+                                  <select id="th-zinsbindung" onchange="updateThCalculations()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                                      <option value="5">5 Jahre</option><option value="10" selected>10 Jahre</option><option value="15">15 Jahre</option><option value="20">20 Jahre</option><option value="30">30 Jahre</option>
+                                  </select>
+                              </div>
+                              <div>
+                                  <label class="block text-xs font-semibold text-slate-500 mb-1">Kaufpreis (€)</label>
+                                  <input type="text" id="th-kaufpreis" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-semibold text-sm">
+                              </div>
+                              <div>
+                                  <label class="block text-xs font-semibold text-slate-500 mb-1">Eigenkapital (€)</label>
+                                  <input type="text" id="th-eigenkapital" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-semibold text-sm">
+                              </div>
+                          </div>
+                          <div class="border-t border-slate-200 pt-4 space-y-3">
+                              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i> Sondertilgungen bearbeiten</span>
+                              <div class="grid grid-cols-1 gap-2 bg-white p-3 rounded-xl border border-slate-100">
+                                  <div class="grid grid-cols-3 gap-1 text-[10px] font-bold text-slate-400 uppercase"><div>Turnus</div><div>Ab Jahr</div><div>Betrag (€)</div></div>
+                                  <div id="th-soti-list" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+                                  <button onclick="addThSoti()" class="w-full mt-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Option hinzufügen</button>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div class="lg:col-span-8 p-6 space-y-6 relative w-full">
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                              <div><span class="text-xs text-slate-400 font-medium uppercase" id="th-output-label">Berechnete Rate</span><div class="text-3xl font-extrabold text-slate-900 mt-1" id="th-output-hero">0,00 €</div></div>
+                              <div class="text-xs space-y-1.5 border-l border-slate-200 pl-4 text-slate-600">
+                                  <div class="flex justify-between"><span>Darlehensbetrag:</span> <strong id="th-out-loan" class="text-slate-800">0,00 €</strong></div>
+                                  <div class="flex justify-between"><span>Zinssatz (Annahme):</span> <strong id="th-out-zins" class="text-slate-800">0 %</strong></div>
+                                  <div class="flex justify-between"><span>Gesamtlaufzeit:</span> <strong id="th-out-term" class="text-slate-800">0 Jahre</strong></div>
+                                  <div class="flex justify-between"><span>Anfängliche Tilgung:</span> <strong id="th-out-tilgung" class="text-slate-800">0 %</strong></div>
+                              </div>
+                          </div>
+                          <div class="flex border-b border-slate-200 text-sm">
+                              <button onclick="setThView('chart')" id="th-btn-view-chart" class="px-4 pb-2 th-tab-active font-semibold">Restschuld im Zeitverlauf</button>
+                              <button onclick="setThView('table')" id="th-btn-view-table" class="px-4 pb-2 text-slate-500 font-medium">Tabellarischer Tilgungsplan</button>
+                          </div>
+                          <div id="th-view-chart" class="h-80 relative w-full">
+                              <canvas id="chartInterhypRepayment"></canvas>
+                              <div id="th-custom-tooltip" class="th-tooltip hidden"></div>
+                          </div>
+                          <div id="th-view-table" class="hidden h-80 overflow-y-auto border border-slate-100 rounded-xl w-full">
+                              <table class="w-full text-left text-xs border-collapse min-w-[500px]">
+                                  <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider sticky top-0 border-b border-slate-200">
+                                      <tr><th class="p-2.5">Jahr / Monat</th><th class="p-2.5 text-right">Restschuld</th><th class="p-2.5 text-right">Getilgt (Summe)</th><th class="p-2.5 text-right">Zinsen (Summe)</th></tr>
+                                  </thead>
+                                  <tbody id="th-table-amortization-rows"></tbody>
+                              </table>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+          </div>
+
+          <!-- TAB: KINDER-TRACKER -->
+          <div id="tab-children" class="hidden space-y-8">
+              <div>
+                  <div class="flex items-center gap-4">
+                      <h2 class="text-2xl font-bold tracking-tight"><span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span> Tracker</h2>
+                      <button onclick="exportChildrenCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all shadow-sm">
+                          <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
+                      </button>
+                  </div>
+                  <p class="text-slate-500">Gleichbehandlung und historische Kostenkontrolle eurer Kinder.</p>
+              </div>
+              
+              <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 h-fit avoid-break">
+                      <h3 class="text-lg font-semibold flex items-center gap-2"><i data-lucide="plus-circle" class="text-indigo-600"></i> Posten einbuchen</h3>
+                      <div class="space-y-3">
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Datum</label>
+                              <input type="date" id="ch-date" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-indigo-600 bg-white">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Empfänger</label>
+                              <select id="ch-select" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-indigo-600 bg-white">
+                                  <option value="child1" id="opt-child1-label">Kind 1</option>
+                                  <option value="child2" id="opt-child2-label">Kind 2</option>
+                              </select>
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Kategorie</label>
+                              <select id="ch-category" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-indigo-600 bg-white">
+                                  <option value="Bildung">Bildung</option><option value="Reisen">Reisen</option><option value="Sport">Sport</option><option value="Hobby">Hobby</option><option value="Depot">Depot</option>
+                              </select>
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Zweck</label>
+                              <input type="text" id="ch-desc" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-indigo-600">
+                          </div>
+                          <div>
+                              <label class="block text-xs font-medium text-slate-500 mb-1">Betrag (€)</label>
+                              <input type="text" id="ch-amount" value="0,00" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this)" class="w-full px-4 py-2 text-right border border-slate-200 rounded-xl font-semibold focus:outline-indigo-600">
+                          </div>
+                          <button onclick="logChildExpense()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all shadow-sm text-sm">Transaktion verbuchen</button>
+                      </div>
+                      <div id="fairness-status" class="p-3 rounded-xl text-xs font-medium mt-2"></div>
+                  </div>
+
+                  <div class="xl:col-span-2 space-y-6 avoid-break">
+                      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                          <div class="flex justify-between items-center">
+                              <h3 class="text-md font-bold text-indigo-700 flex items-center gap-2"><i data-lucide="user"></i> Historie: <span class="lbl-child1-name">Kind 1</span></h3>
+                              <span id="child1-total-badge" class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-xl">0,00 €</span>
+                          </div>
+                          <div class="overflow-x-auto max-h-56">
+                              <table class="w-full text-left text-xs border-collapse min-w-[500px]">
+                                  <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider sticky top-0 border-b border-slate-100">
+                                      <tr><th class="p-2">Datum</th><th class="p-2">Kategorie</th><th class="p-2">Zweck</th><th class="p-2 text-right">Betrag</th><th class="p-2 text-right">Aktion</th></tr>
+                                  </thead>
+                                  <tbody id="child1-table-body"></tbody>
+                              </table>
+                          </div>
+                      </div>
+
+                      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                          <div class="flex justify-between items-center">
+                              <h3 class="text-md font-bold text-emerald-700 flex items-center gap-2"><i data-lucide="user"></i> Historie: <span class="lbl-child2-name">Kind 2</span></h3>
+                              <span id="child2-total-badge" class="px-3 py-1 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl">0,00 €</span>
+                          </div>
+                          <div class="overflow-x-auto max-h-56">
+                              <table class="w-full text-left text-xs border-collapse min-w-[500px]">
+                                  <thead class="bg-slate-50 text-slate-400 uppercase tracking-wider sticky top-0 border-b border-slate-100">
+                                      <tr><th class="p-2">Datum</th><th class="p-2">Kategorie</th><th class="p-2">Zweck</th><th class="p-2 text-right">Betrag</th><th class="p-2 text-right">Aktion</th></tr>
+                                  </thead>
+                                  <tbody id="child2-table-body"></tbody>
+                              </table>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB FÜR PERSONALISIERUNG -->
+          <div id="tab-settings" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Profil- & App-Personalisierung</h2>
+                  <p class="text-slate-500">Vergibe individuelle Wunschnamen. Die App formatiert alle Bezeichnungen, PDF-Berichte und Dropdowns reaktiv.</p>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl space-y-4 avoid-break">
+                  <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="users" class="text-indigo-600"></i> Namen definieren</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Name Ehemann</label>
+                          <input type="text" id="set-name-husband" oninput="handleNameChange()" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                      </div>
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Name Ehefrau</label>
+                          <input type="text" id="set-name-wife" oninput="handleNameChange()" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                      </div>
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Name Kind 1</label>
+                          <input type="text" id="set-name-child1" oninput="handleNameChange()" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                      </div>
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Name Kind 2</label>
+                          <input type="text" id="set-name-child2" oninput="handleNameChange()" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                      </div>
+                  </div>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl space-y-4 avoid-break mt-8">
+                  <div class="flex justify-between items-center">
+                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-600"></i> Lokale Verschlüsselung (AES-256)</h3>
+                      <span id="enc-status-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">Inaktiv</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Sichere dein Vermögens-Cockpit mit einem Masterpasswort. Die Daten werden verschlüsselt im Browser (LocalStorage) abgelegt.</p>
+                  
+                  <div id="setup-pwd-area" class="space-y-3 pt-2">
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Neues Masterpasswort / Passwort ändern</label>
+                          <input type="password" id="set-pwd-1" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                      </div>
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Passwort wiederholen</label>
+                          <input type="password" id="set-pwd-2" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                      </div>
+                      <div class="flex gap-2 pt-1">
+                          <button onclick="setMasterPassword()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl transition-all text-sm">Passwort setzen</button>
+                          <button onclick="removeMasterPassword()" id="btn-remove-pwd" class="hidden py-2 px-4 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium rounded-xl transition-all text-sm tooltip" title="Verschlüsselung entfernen"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                      </div>
+                      <p id="pwd-msg" class="text-xs font-medium mt-1"></p>
+                  </div>
+              </div>
+          </div>
+
+      </main>
+  </div>
+
+  <script>
+      window.appPassword = null;
+      
+      Chart.register(ChartDataLabels);
+      Chart.defaults.set('plugins.datalabels', {
+          color: '#ffffff',
+          font: { weight: 'bold', size: 10 },
+          formatter: function(value) { return value > 0 ? formatEuroDisplay(value) + ' €' : ''; }
+      });
+
+      const TABLE_CONFIGS = {
+          realestate: {
+              path: ['assets', 'realestate'], tbodyId: 'realestate-table-body',
+              cols: [{field: 'name', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          liabilities: {
+              path: ['liabilities'], tbodyId: 'liabilities-table-body',
+              cols: [{field: 'type', type: 'select-options', options: ['Immobilienkredit', 'Konsumkredit', 'Autofinanzierung', 'BAföG', 'Sonstige']}, {field: 'name', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          capitalGains: {
+              path: ['capitalGains'], tbodyId: 'capital-gains-table-body',
+              cols: [{field: 'type', type: 'select-options', options: ['Tagesgeld', 'Festgeld', 'Depot/Dividende']}, {field: 'name', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          investments: {
+              path: ['investments'], tbodyId: 'investment-table-body',
+              cols: [{field: 'type', type: 'select-options', options: ['ETF-Sparplan', 'Rücklagen', 'Kinder']}, {field: 'name', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          insurances: {
+              path: ['insurances'], tbodyId: 'insurance-table-body',
+              cols: [{field: 'type', type: 'datalist', listId: 'insurance-types'}, {field: 'provider', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          carExpenses: {
+              path: ['carExpenses'], tbodyId: 'car-table-body',
+              cols: [{field: 'type', type: 'text'}, {field: 'desc', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          leisureExpenses: {
+              path: ['leisureExpenses'], tbodyId: 'leisure-table-body',
+              cols: [{field: 'type', type: 'datalist', listId: 'leisure-clusters'}, {field: 'desc', type: 'text'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          tagesgeld: {
+              path: ['assets', 'tagesgeld'], tbodyId: 'tagesgeld-table-body',
+              cols: [{field: 'bank', type: 'text'}, {field: 'interest', type: 'number', step: '0.01'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          festgeld: {
+              path: ['assets', 'festgeld'], tbodyId: 'festgeld-table-body',
+              cols: [{field: 'bank', type: 'text'}, {field: 'interest', type: 'number', step: '0.01'}, {field: 'owner', type: 'select-owner'}, {field: 'value', type: 'currency'}]
+          },
+          depot: { 
+              path: ['depot'], tbodyId: 'depot-table-body',
+              cols: [
+                  {field: 'type', type: 'datalist', listId: 'depot-types', classes: 'w-24'}, 
+                  {field: 'name', type: 'text'},
+                  {field: 'bank', type: 'text', classes: 'w-24'},
+                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase'}, 
+                  {field: 'owner', type: 'select-owner', classes: 'w-24'},
+                  {field: 'anzahl', type: 'number', step: '0.0001', classes: 'w-24'},
+                  {field: 'kaufpreis', type: 'currency', classes: 'w-28'},
+                  {field: 'aktuellerPreis', type: 'currency', classes: 'w-28'},
+                  {field: 'value', type: 'depot-performance', classes: 'w-36'}
+              ]
+          }
+      };
+
+      let state = {
+          settings: { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, sort: {} },
+          income: { husbandAnnual: 0, wifeAnnual: 0, kindergeldAnnual: 0, elterngeldHusbandAnnual: 0, elterngeldWifeAnnual: 0, otherAnnual: 0 },
+          capitalGains: [], expenses: { rent: 0, rentOwner: "both", household: 0, householdOwner: "both" },
+          investments: [], insurances: [], carExpenses: [], leisureExpenses: [],
+          assets: { tagesgeld: [], festgeld: [], realestate: [] }, liabilities: [], 
+          depot: [], depotLastUpdate: null, childExpenses: [],
+          salaryHistory: { husband: [], wife: [] },
+          immoPlanning: { sollzins: 3.69, tilgung: 1.4, sicherheitsreserve: 0, modus: 'laufzeit', volltilgung: false, wunschLaufzeit: 35, zinsbindung: 10, sondertilgungen: [], scenarios: [] },
+          calculated: { mtlIncome: 0, mtlExpenses: 0 }
+      };
+
+      let charts = { cashflow: null, assets: null, depot: null, children: null, interhyp: null, expenseStructure: null, wealthProjection: null, salaryHistory: null };
+      let activeThSchedule = [];
+      let tempSalaryComponents = [{id: 1, name: 'Grundgehalt', value: 0}];
+
+      function toggleMobileSidebar() {
+          const sidebar = document.getElementById('sidebar-nav');
+          const backdrop = document.getElementById('mobile-backdrop');
+          if (sidebar.classList.contains('-translate-x-full')) {
+              sidebar.classList.remove('-translate-x-full');
+              backdrop.classList.remove('hidden');
+          } else {
+              sidebar.classList.add('-translate-x-full');
+              backdrop.classList.add('hidden');
+          }
+      }
+
+      function escapeHTML(str) {
+          if (typeof str !== 'string') return str;
+          return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
+      }
+
+      function formatEuroDisplay(val) { return Number(val).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      
+      function parseEuroInput(str) {
+          if (!str && str !== 0) return 0;
+          let s = str.toString().trim();
+          const commaCount = (s.match(/,/g) || []).length; const dotCount = (s.match(/\./g) || []).length;
+          if (commaCount > 0 && dotCount > 0) { if (s.lastIndexOf(',') > s.lastIndexOf('.')) { s = s.replace(/\./g, '').replace(',', '.'); } else { s = s.replace(/,/g, ''); }
+          } else if (commaCount === 1 && dotCount === 0) { s = s.replace(',', '.'); } else if (commaCount > 1 && dotCount === 0) { s = s.replace(/,/g, ''); }
+          return parseFloat(s) || 0;
+      }
+
+      function setupCurrencyFocus(input) { let num = parseEuroInput(input.value); input.value = num === 0 ? '' : num.toFixed(2); }
+      function setupCurrencyBlur(input) { let num = parseFloat(input.value) || 0; input.value = formatEuroDisplay(num); }
+
+      function updateCategorySum(elementId, valH, valW, valB) {
+          const el = document.getElementById(elementId);
+          if(el) { el.innerText = `(M: ${formatEuroDisplay(valH)} € | F: ${formatEuroDisplay(valW)} € | G: ${formatEuroDisplay(valB)} €)`; }
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+          const v11Data = localStorage.getItem('famfinanz_v11_state');
+          if (v11Data) {
+              if (v11Data.startsWith('U2Fsd')) { document.getElementById('lock-screen').classList.remove('hidden'); } 
+              else { parseAndLoadState(v11Data); document.getElementById('app-wrapper').classList.remove('hidden'); }
+          } else {
+              parseAndLoadState(null); document.getElementById('app-wrapper').classList.remove('hidden');
+          }
+          updateEncryptionUI();
+          lucide.createIcons();
+      });
+
+      function unlockApp() {
+          const pwdInput = document.getElementById('unlock-pwd').value; const encryptedData = localStorage.getItem('famfinanz_v11_state'); const errorMsg = document.getElementById('unlock-error');
+          if(!encryptedData) return;
+          try {
+              const bytes = CryptoJS.AES.decrypt(encryptedData, pwdInput); const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+              if (!decryptedStr || decryptedStr.length === 0) throw new Error("Entschlüsselung fehlgeschlagen.");
+              window.appPassword = pwdInput; errorMsg.classList.add('hidden'); document.getElementById('lock-screen').classList.add('hidden'); document.getElementById('app-wrapper').classList.remove('hidden');
+              parseAndLoadState(decryptedStr); updateEncryptionUI();
+              setTimeout(() => { initCharts(); initWealthProjectionChart(); renderSalaryChart(); }, 100);
+          } catch (error) { errorMsg.classList.remove('hidden'); }
+      }
+
+      function parseAndLoadState(jsonStr) {
+          if (jsonStr) { try { state = JSON.parse(jsonStr); } catch(e) { console.error("JSON Parsing Error", e); } }
+          
+          if (!state.settings) state.settings = { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, sort: {} };
+          if (typeof state.settings.applyCapitalGainsTax === 'undefined') state.settings.applyCapitalGainsTax = false;
+          if (typeof state.settings.includeImmoInEK === 'undefined') state.settings.includeImmoInEK = false;
+          if (!state.settings.sort) state.settings.sort = {};
+          if (!state.liabilities) state.liabilities = [];
+          if (!state.salaryHistory) state.salaryHistory = { husband: [], wife: [] };
+          if (!state.expenses.rentOwner) state.expenses.rentOwner = "both";
+          if (!state.expenses.householdOwner) state.expenses.householdOwner = "both";
+          if (!state.calculated) state.calculated = { mtlIncome: 0, mtlExpenses: 0 };
+          
+          if (state.income) {
+              if (typeof state.income.kindergeldMonthly !== 'undefined') { state.income.kindergeldAnnual = state.income.kindergeldMonthly * 12; delete state.income.kindergeldMonthly; }
+              if (typeof state.income.otherMonthly !== 'undefined') { state.income.otherAnnual = state.income.otherMonthly * 12; delete state.income.otherMonthly; }
+              if (typeof state.income.kindergeldAnnual === 'undefined') state.income.kindergeldAnnual = 0;
+              if (typeof state.income.otherAnnual === 'undefined') state.income.otherAnnual = 0;
+          }
+
+          if (state.depot) {
+              state.depot.forEach(d => {
+                  if(typeof d.anzahl === 'undefined') d.anzahl = 1;
+                  if(typeof d.kaufpreis === 'undefined') d.kaufpreis = d.value || 0;
+                  if(typeof d.aktuellerPreis === 'undefined') d.aktuellerPreis = d.value || 0;
+                  if(typeof d.ticker === 'undefined') { d.ticker = d.wkn || ""; delete d.wkn; }
+                  if(typeof d.bank === 'undefined') { d.bank = ""; }
+                  d.value = d.anzahl * d.aktuellerPreis;
+              });
+          }
+
+          loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
+          renderAllTables(); renderSalaryComponents(); renderSalaryHistoryTables();
+          updateCalculationsAndCharts(); updateDepotTimestamp();
+      }
+
+      function saveToLocalStorage() { 
+          const dataStr = JSON.stringify(state);
+          if (window.appPassword) { localStorage.setItem('famfinanz_v11_state', CryptoJS.AES.encrypt(dataStr, window.appPassword).toString());
+          } else { localStorage.setItem('famfinanz_v11_state', dataStr); }
+      }
+
+      function setMasterPassword() {
+          const p1 = document.getElementById('set-pwd-1').value; const p2 = document.getElementById('set-pwd-2').value; const msg = document.getElementById('pwd-msg');
+          if(!p1 || !p2) { msg.textContent = "Bitte beide Felder ausfüllen."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
+          if(p1 !== p2) { msg.textContent = "Passwörter stimmen nicht überein."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
+          window.appPassword = p1; saveToLocalStorage();
+          document.getElementById('set-pwd-1').value = ''; document.getElementById('set-pwd-2').value = '';
+          msg.textContent = "Tresor erfolgreich verschlüsselt."; msg.className = "text-xs font-medium mt-1 text-emerald-600"; updateEncryptionUI();
+      }
+
+      function removeMasterPassword() {
+          if(confirm("Bist du sicher? Deine Daten werden unverschlüsselt im Browser abgelegt.")) {
+              window.appPassword = null; saveToLocalStorage(); const msg = document.getElementById('pwd-msg');
+              msg.textContent = "Verschlüsselung aufgehoben."; msg.className = "text-xs font-medium mt-1 text-slate-500"; updateEncryptionUI();
+          }
+      }
+
+      function updateEncryptionUI() {
+          const badge = document.getElementById('enc-status-badge'); const btnRemove = document.getElementById('btn-remove-pwd');
+          if(badge && btnRemove) {
+              if(window.appPassword) { badge.textContent = "Aktiv"; badge.className = "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700"; btnRemove.classList.remove('hidden'); } 
+              else { badge.textContent = "Inaktiv"; badge.className = "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500"; btnRemove.classList.add('hidden'); }
+          }
+      }
+
+      function applyDynamicNames() {
+          const names = state.settings.names;
+          document.querySelectorAll('.lbl-husband-name').forEach(el => el.innerText = names.husband);
+          document.querySelectorAll('.lbl-wife-name').forEach(el => el.innerText = names.wife);
+          document.querySelectorAll('.lbl-child1-name').forEach(el => el.innerText = names.child1);
+          document.querySelectorAll('.lbl-child2-name').forEach(el => el.innerText = names.child2);
+          if(document.getElementById('opt-child1-label')) document.getElementById('opt-child1-label').innerText = names.child1;
+          if(document.getElementById('opt-child2-label')) document.getElementById('opt-child2-label').innerText = names.child2;
+      }
+
+      function handleNameChange() {
+          state.settings.names.husband = document.getElementById('set-name-husband').value.trim() || "Ehemann";
+          state.settings.names.wife = document.getElementById('set-name-wife').value.trim() || "Ehefrau";
+          state.settings.names.child1 = document.getElementById('set-name-child1').value.trim() || "Kind 1";
+          state.settings.names.child2 = document.getElementById('set-name-child2').value.trim() || "Kind 2";
+          saveToLocalStorage(); applyDynamicNames(); syncOwnerDropdowns(); updateCalculationsAndCharts(); renderSalaryChart();
+      }
+
+      function updateTaxSetting() { state.settings.applyCapitalGainsTax = document.getElementById('set-tax-cg').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
+      function toggleImmoEK() { state.settings.includeImmoInEK = document.getElementById('immo-ek-toggle').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
+      
+      function getOwnerOptionsHtml(currentVal) {
+          const names = state.settings.names;
+          return `<option value="both" ${currentVal==='both'?'selected':''}>Gemeinsam</option><option value="husband" ${currentVal==='husband'?'selected':''}>${escapeHTML(names.husband)}</option><option value="wife" ${currentVal==='wife'?'selected':''}>${escapeHTML(names.wife)}</option>`;
+      }
+
+      function syncOwnerDropdowns() {
+          const rentSelect = document.getElementById('exp-rent-owner'); const householdSelect = document.getElementById('exp-household-owner');
+          if(rentSelect) rentSelect.innerHTML = getOwnerOptionsHtml(state.expenses.rentOwner);
+          if(householdSelect) householdSelect.innerHTML = getOwnerOptionsHtml(state.expenses.householdOwner);
+      }
+
+      function switchTab(tabId) {
+          ['dashboard', 'income', 'expenses', 'assets', 'immo', 'children', 'settings', 'salary'].forEach(id => {
+              document.getElementById(`tab-${id}`).classList.add('hidden');
+              document.getElementById(`nav-${id}`).classList.remove('bg-indigo-50', 'text-indigo-700');
+              document.getElementById(`nav-${id}`).classList.add('text-slate-600');
+          });
+          document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+          document.getElementById(`nav-${tabId}`).classList.add('bg-indigo-50', 'text-indigo-700');
+          
+          if (window.innerWidth < 768) {
+              document.getElementById('sidebar-nav').classList.add('-translate-x-full');
+              document.getElementById('mobile-backdrop').classList.add('hidden');
+          }
+
+          if (tabId === 'dashboard') { setTimeout(() => { initCharts(); renderSalaryChart(); }, 40); }
+          if (tabId === 'assets') setTimeout(initWealthProjectionChart, 40);
+          if (tabId === 'immo') setTimeout(updateThCalculations, 40);
+      }
+
+      function loadStateIntoInputs() {
+          const names = state.settings.names;
+          document.getElementById('set-name-husband').value = names.husband; document.getElementById('set-name-wife').value = names.wife;
+          document.getElementById('set-name-child1').value = names.child1; document.getElementById('set-name-child2').value = names.child2;
+          document.getElementById('set-tax-cg').checked = state.settings.applyCapitalGainsTax;
+          if(document.getElementById('immo-ek-toggle')) document.getElementById('immo-ek-toggle').checked = state.settings.includeImmoInEK;
+
+          document.getElementById('inc-husband-annual').value = formatEuroDisplay(state.income.husbandAnnual); document.getElementById('inc-wife-annual').value = formatEuroDisplay(state.income.wifeAnnual);
+          document.getElementById('inc-kindergeld').value = formatEuroDisplay(state.income.kindergeldAnnual);
+          document.getElementById('inc-elterngeld-husband').value = formatEuroDisplay(state.income.elterngeldHusbandAnnual); document.getElementById('inc-elterngeld-wife').value = formatEuroDisplay(state.income.elterngeldWifeAnnual);
+          document.getElementById('inc-other').value = formatEuroDisplay(state.income.otherAnnual);
+          document.getElementById('exp-rent').value = formatEuroDisplay(state.expenses.rent); document.getElementById('exp-household').value = formatEuroDisplay(state.expenses.household);
+          if(state.immoPlanning) {
+              document.getElementById('immo-sollzins').value = state.immoPlanning.sollzins || 3.69; document.getElementById('immo-tilgung').value = state.immoPlanning.tilgung || 1.4;
+              document.getElementById('immo-reserve').value = formatEuroDisplay(state.immoPlanning.sicherheitsreserve || 0);
+          }
+
+          const dateInput = document.getElementById('ch-date'); if(dateInput && !dateInput.value) { dateInput.value = new Date().toISOString().split('T')[0]; }
+      }
+
+      function updateFinanceData() {
+          state.income.husbandAnnual = parseEuroInput(document.getElementById('inc-husband-annual').value); state.income.wifeAnnual = parseEuroInput(document.getElementById('inc-wife-annual').value);
+          state.income.kindergeldAnnual = parseEuroInput(document.getElementById('inc-kindergeld').value);
+          state.income.elterngeldHusbandAnnual = parseEuroInput(document.getElementById('inc-elterngeld-husband').value); state.income.elterngeldWifeAnnual = parseEuroInput(document.getElementById('inc-elterngeld-wife').value);
+          state.income.otherAnnual = parseEuroInput(document.getElementById('inc-other').value);
+          state.expenses.rent = parseEuroInput(document.getElementById('exp-rent').value); state.expenses.household = parseEuroInput(document.getElementById('exp-household').value);
+          if(document.getElementById('exp-rent-owner')) state.expenses.rentOwner = document.getElementById('exp-rent-owner').value;
+          if(document.getElementById('exp-household-owner')) state.expenses.householdOwner = document.getElementById('exp-household-owner').value;
+          
+          if(document.getElementById('immo-sollzins')) {
+              state.immoPlanning.sollzins = parseFloat(document.getElementById('immo-sollzins').value) || 3.69; state.immoPlanning.tilgung = parseFloat(document.getElementById('immo-tilgung').value) || 1.4;
+              state.immoPlanning.sicherheitsreserve = parseEuroInput(document.getElementById('immo-reserve').value);
+          }
+          saveToLocalStorage(); updateCalculationsAndCharts();
+      }
+
+      function exportStateToFile() {
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+          const downloadAnchor = document.createElement('a'); downloadAnchor.setAttribute("href", dataStr);
+          downloadAnchor.setAttribute("download", `famfinanz_backup.json`); document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
+      }
+
+      function importStateFromFile(event) {
+          const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+          reader.onload = function(e) {
+              try {
+                  const parsed = JSON.parse(e.target.result);
+                  if (!parsed || typeof parsed !== 'object' || !parsed.settings || !parsed.income) { alert("Fehler: Die Datei hat keine gültige FamFinanz-Struktur."); return; }
+                  state = parsed; saveToLocalStorage(); loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
+                  renderAllTables(); renderSalaryHistoryTables(); updateCalculationsAndCharts(); renderSalaryChart(); updateDepotTimestamp();
+                  alert("Backup erfolgreich eingelesen!");
+              } catch(err) { alert("Fehler beim Lesen der Datei."); }
+          };
+          reader.readAsText(file);
+      }
+
+      function exportDepotCSV() {
+          let csvContent = "data:text/csv;charset=utf-8,Typ;Bezeichnung;Bank/Broker;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Akt. Kurs;Gesamtwert\n";
+          state.depot.forEach(item => {
+              let row = [
+                  `"${item.type||''}"`, `"${item.name||''}"`, `"${item.bank||''}"`, `"${item.ticker||''}"`, `"${item.owner||''}"`,
+                  `"${item.anzahl||0}"`.replace('.', ','), `"${item.kaufpreis||0}"`.replace('.', ','),
+                  `"${item.aktuellerPreis||0}"`.replace('.', ','), `"${item.value||0}"`.replace('.', ',')
+              ];
+              csvContent += row.join(";") + "\n";
+          });
+          const encodedUri = encodeURI(csvContent); const link = document.createElement("a");
+          link.setAttribute("href", encodedUri); link.setAttribute("download", "famfinanz_depot_export.csv");
+          document.body.appendChild(link); link.click(); link.remove();
+      }
+
+      function exportChildrenCSV() {
+          let csvContent = "data:text/csv;charset=utf-8,Datum;Kind;Kategorie;Zweck;Betrag\n";
+          state.childExpenses.forEach(e => {
+              let childName = e.child === 'child1' ? state.settings.names.child1 : state.settings.names.child2;
+              let row = [ `"${e.date||''}"`, `"${childName}"`, `"${e.category||''}"`, `"${e.desc||''}"`, `"${e.amount||0}"`.replace('.', ',') ];
+              csvContent += row.join(";") + "\n";
+          });
+          const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", "famfinanz_kinder_export.csv"); document.body.appendChild(link); link.click(); link.remove();
+      }
+
+      function renderSalaryComponents() {
+          const container = document.getElementById('sal-components-container'); if(!container) return; container.innerHTML = ''; let total = 0;
+          tempSalaryComponents.forEach((comp, idx) => {
+              total += comp.value; const row = document.createElement('div'); row.className = "flex gap-2 items-center";
+              const inpName = document.createElement('input'); inpName.type = 'text'; inpName.placeholder = 'Bestandteil (z.B. Grundgehalt)'; inpName.className = 'flex-1 px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-indigo-600 text-xs font-medium'; inpName.value = comp.name; inpName.onchange = (e) => { tempSalaryComponents[idx].name = e.target.value; };
+              const inpVal = document.createElement('input'); inpVal.type = 'text'; inpVal.className = 'w-28 px-3 py-1.5 text-right border border-slate-200 rounded-lg focus:outline-indigo-600 text-xs font-semibold'; inpVal.value = formatEuroDisplay(comp.value);
+              inpVal.onfocus = () => setupCurrencyFocus(inpVal); inpVal.onblur = () => { setupCurrencyBlur(inpVal); tempSalaryComponents[idx].value = parseEuroInput(inpVal.value); renderSalaryComponents(); };
+              const btnDel = document.createElement('button'); btnDel.className = 'text-rose-400 hover:text-rose-600 p-1'; btnDel.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>'; btnDel.onclick = () => { tempSalaryComponents.splice(idx, 1); renderSalaryComponents(); };
+              row.appendChild(inpName); row.appendChild(inpVal); row.appendChild(btnDel); container.appendChild(row);
+          });
+          document.getElementById('sal-calc-total').innerText = formatEuroDisplay(total) + " €"; lucide.createIcons();
+      }
+      function addSalComponentRow() { tempSalaryComponents.push({ id: Date.now(), name: '', value: 0 }); renderSalaryComponents(); }
+      function validateMMYY(val) { if(!val || val.trim() === '') return true; const regex = /^(0[1-9]|1[0-2])\/\d{2}$/; return regex.test(val.trim()); }
+      function saveSalaryEntry() {
+          const owner = document.getElementById('sal-owner').value; const start = document.getElementById('sal-start').value.trim(); const end = document.getElementById('sal-end').value.trim();
+          const company = document.getElementById('sal-company').value.trim(); const comment = document.getElementById('sal-comment').value.trim();
+          if(!validateMMYY(start)) { alert("Bitte Gültig-von im Format MM/YY eingeben (z.B. 01/24)."); return; } if(!start) { alert("Das Gültig-von Feld darf nicht leer sein."); return; } if(!validateMMYY(end)) { alert("Bitte Gültig-bis im Format MM/YY eingeben, oder leer lassen für 'heute'."); return; }
+          const entry = { id: "sal_" + Date.now(), start: start, end: end, company: company, comment: comment, components: JSON.parse(JSON.stringify(tempSalaryComponents)) };
+          state.salaryHistory[owner].push(entry);
+          state.salaryHistory[owner].sort((a, b) => { let valA = parseMMYYtoAbsolute(a.start) ? parseMMYYtoAbsolute(a.start).abs : 0; let valB = parseMMYYtoAbsolute(b.start) ? parseMMYYtoAbsolute(b.start).abs : 0; return valA - valB; });
+          saveToLocalStorage();
+          document.getElementById('sal-start').value = ''; document.getElementById('sal-end').value = ''; document.getElementById('sal-company').value = ''; document.getElementById('sal-comment').value = '';
+          tempSalaryComponents = [{id: Date.now(), name: 'Grundgehalt', value: 0}];
+          renderSalaryComponents(); renderSalaryHistoryTables(); renderSalaryChart();
+      }
+      function editSalaryEntry(owner, idx) {
+          const entry = state.salaryHistory[owner][idx];
+          document.getElementById('sal-owner').value = owner; document.getElementById('sal-start').value = entry.start; document.getElementById('sal-end').value = entry.end; document.getElementById('sal-company').value = entry.company; document.getElementById('sal-comment').value = entry.comment;
+          tempSalaryComponents = JSON.parse(JSON.stringify(entry.components)); state.salaryHistory[owner].splice(idx, 1); saveToLocalStorage(); renderSalaryComponents(); renderSalaryHistoryTables(); renderSalaryChart(); window.scrollTo(0, document.getElementById('sal-owner').offsetTop - 50);
+      }
+      function renderSalaryHistoryTables() {
+          const hBody = document.getElementById('sal-table-husband'); const wBody = document.getElementById('sal-table-wife'); if(!hBody || !wBody) return; hBody.innerHTML = ''; wBody.innerHTML = '';
+          ['husband', 'wife'].forEach(owner => {
+              const tbody = owner === 'husband' ? hBody : wBody;
+              state.salaryHistory[owner].forEach((entry, idx) => {
+                  const total = entry.components.reduce((s, c) => s + c.value, 0); const compDesc = entry.components.map(c => `${c.name}: ${formatEuroDisplay(c.value)}€`).join(', '); const endStr = entry.end ? entry.end : 'Heute';
+                  const btnEdit = `<button onclick="editSalaryEntry('${owner}', ${idx})" class="text-indigo-400 hover:text-indigo-600 p-1 mr-1"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`;
+                  const tr = document.createElement('tr'); tr.className = 'border-b border-slate-100';
+                  tr.innerHTML = `<td class="py-2">${escapeHTML(entry.start)} - ${escapeHTML(endStr)}</td><td class="py-2 font-medium">${escapeHTML(entry.company)}</td><td class="py-2 text-[10px] text-slate-500 max-w-[200px] truncate" title="${compDesc}\n${escapeHTML(entry.comment)}">${compDesc} <br><span class="italic">${escapeHTML(entry.comment)}</span></td><td class="py-2 text-right font-semibold text-indigo-700">${formatEuroDisplay(total)} €</td><td class="py-2 text-right">${btnEdit}<button onclick="deleteSalaryEntry('${owner}', ${idx})" class="text-rose-400 hover:text-rose-600 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
+                  tbody.appendChild(tr);
+              });
+          });
+          lucide.createIcons();
+      }
+      function deleteSalaryEntry(owner, idx) { state.salaryHistory[owner].splice(idx, 1); saveToLocalStorage(); renderSalaryHistoryTables(); renderSalaryChart(); }
+      function parseMMYYtoAbsolute(str) { if(!str || !str.trim()) return null; const p = str.trim().split('/'); if(p.length !== 2) return null; let m = parseInt(p[0], 10); let y = parseInt(p[1], 10); if(y < 100) y += 2000; return { month: m, year: y, abs: y * 12 + m }; }
+      function renderSalaryChart() { 
+          const ctx = document.getElementById('chartSalaryHistory'); if(!ctx) return;
+          const today = new Date(); const currentAbs = today.getFullYear() * 12 + (today.getMonth() + 1);
+          let minAbs = currentAbs; const allSals = [...state.salaryHistory.husband, ...state.salaryHistory.wife];
+          if(allSals.length === 0) { minAbs = currentAbs - 12; } else { allSals.forEach(s => { let st = parseMMYYtoAbsolute(s.start); if(st && st.abs < minAbs) minAbs = st.abs; }); }
+          let labels = []; let dataH = []; let dataW = [];
+          for(let m = minAbs; m <= currentAbs; m++) {
+              let year = Math.floor((m-1)/12); let month = (m-1)%12 + 1; labels.push(month.toString().padStart(2, '0') + '/' + year.toString().slice(-2));
+              let valH = 0; state.salaryHistory.husband.forEach(s => { let st = parseMMYYtoAbsolute(s.start); let en = parseMMYYtoAbsolute(s.end) || {abs: currentAbs}; if(st && m >= st.abs && m <= en.abs) { valH = s.components.reduce((sum, c) => sum + c.value, 0); } }); dataH.push(valH);
+              let valW = 0; state.salaryHistory.wife.forEach(s => { let st = parseMMYYtoAbsolute(s.start); let en = parseMMYYtoAbsolute(s.end) || {abs: currentAbs}; if(st && m >= st.abs && m <= en.abs) { valW = s.components.reduce((sum, c) => sum + c.value, 0); } }); dataW.push(valW);
+          }
+          if(charts.salaryHistory) { charts.salaryHistory.data.labels = labels; charts.salaryHistory.data.datasets[0].label = state.settings.names.husband; charts.salaryHistory.data.datasets[0].data = dataH; charts.salaryHistory.data.datasets[1].label = state.settings.names.wife; charts.salaryHistory.data.datasets[1].data = dataW; charts.salaryHistory.update(); } 
+          else { charts.salaryHistory = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: state.settings.names.husband, data: dataH, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }, { label: state.settings.names.wife, data: dataW, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { datalabels: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + formatEuroDisplay(ctx.parsed.y) + ' €'; } } } }, scales: { x: { ticks: { font: { size: 10 }, maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { font: { size: 10 } } } } } }); }
+      }
+
+      function renderAllTables() { Object.keys(TABLE_CONFIGS).forEach(key => renderGenericTable(key)); renderThSotiList(); renderChildTrackerTables(); }
+      
+      function sortTable(configKey, field) {
+          if (!state.settings.sort) state.settings.sort = {}; let current = state.settings.sort[configKey] || { field: field, dir: 'desc' };
+          if (current.field === field) { current.dir = current.dir === 'asc' ? 'desc' : 'asc'; } else { current.field = field; current.dir = 'asc'; }
+          state.settings.sort[configKey] = current; saveToLocalStorage(); renderGenericTable(configKey);
+      }
+
+      function renderGenericTable(configKey) {
+          const config = TABLE_CONFIGS[configKey]; const tbody = document.getElementById(config.tbodyId); if (!tbody) return; tbody.innerHTML = '';
+          let arr = state; config.path.forEach(p => arr = arr[p]);
+          
+          const sortConf = state.settings.sort ? state.settings.sort[configKey] : null;
+          if (sortConf) {
+              arr.sort((a, b) => {
+                  let valA = a[sortConf.field]; let valB = b[sortConf.field];
+                  if (typeof valA === 'string') valA = valA.toLowerCase(); if (typeof valB === 'string') valB = valB.toLowerCase();
+                  if (valA < valB) return sortConf.dir === 'asc' ? -1 : 1; if (valA > valB) return sortConf.dir === 'asc' ? 1 : -1; return 0;
+              });
+          }
+          
+          arr.forEach((item, index) => {
+              const tr = document.createElement('tr'); tr.className = 'border-b border-slate-100 text-sm hover:bg-slate-50 transition-colors';
+              config.cols.forEach(col => {
+                  const td = document.createElement('td'); 
+                  td.className = 'py-2 ' + (col.classes || '');
+                  
+                  let input;
+                  if (col.type === 'depot-performance') {
+                      const val = (item.anzahl || 0) * (item.aktuellerPreis || 0);
+                      const invest = (item.anzahl || 0) * (item.kaufpreis || 0);
+                      const diff = val - invest;
+                      const pct = invest > 0 ? (diff / invest) * 100 : 0;
+                      const colorClass = diff > 0 ? 'text-emerald-600' : (diff < 0 ? 'text-rose-600' : 'text-slate-500');
+                      const sign = diff > 0 ? '+' : '';
+                      
+                      td.innerHTML = `
+                          <div class="text-right flex flex-col justify-center h-full pr-2">
+                              <span class="font-bold text-xs">${formatEuroDisplay(val)} €</span>
+                              <span class="${colorClass} text-[10px] font-semibold">${sign}${formatEuroDisplay(diff)} € (${sign}${formatEuroDisplay(pct)} %)</span>
+                          </div>
+                      `;
+                      tr.appendChild(td);
+                      return; 
+                  } 
+                  else if (col.type === 'select-owner') {
+                      input = document.createElement('select'); input.className = 'px-2 py-0.5 border border-slate-200 bg-white text-xs rounded-lg w-full';
+                      input.innerHTML = getOwnerOptionsHtml(item[col.field]); input.onchange = (e) => handleTableUpdate(config.path, index, col.field, e.target.value, configKey);
+                  } else if (col.type === 'select-options') {
+                      input = document.createElement('select'); input.className = 'px-2 py-1 border border-slate-200 bg-white text-xs rounded-lg w-full';
+                      col.options.forEach(opt => { const option = document.createElement('option'); option.value = opt; option.text = opt; if (item[col.field] === opt) option.selected = true; input.appendChild(option); });
+                      input.onchange = (e) => handleTableUpdate(config.path, index, col.field, e.target.value, configKey);
+                  } else if (col.type === 'datalist') {
+                      input = document.createElement('input'); input.type = 'text'; input.setAttribute('list', col.listId);
+                      input.value = item[col.field] || ''; input.className = 'w-full px-2 py-1 bg-transparent text-xs border-b border-transparent hover:border-slate-200 focus:outline-none';
+                      input.onchange = (e) => handleTableUpdate(config.path, index, col.field, e.target.value, configKey);
+                  } else {
+                      input = document.createElement('input'); input.type = col.type === 'number' ? 'number' : 'text'; if(col.step) input.step = col.step;
+                      if (col.type === 'currency') {
+                          input.value = formatEuroDisplay(item[col.field]); input.className = 'w-full text-right px-2 py-1 bg-transparent font-semibold text-xs focus:outline-none border-b border-transparent hover:border-slate-200';
+                          input.onfocus = () => setupCurrencyFocus(input); 
+                          input.onblur = () => { setupCurrencyBlur(input); handleTableUpdate(config.path, index, col.field, parseEuroInput(input.value), configKey); };
+                      } else if (col.type === 'number') {
+                          input.value = item[col.field]; input.className = 'w-full px-2 py-1 bg-transparent text-xs text-right focus:outline-none border-b border-transparent hover:border-slate-200 font-medium';
+                          input.onchange = (e) => handleTableUpdate(config.path, index, col.field, parseFloat(e.target.value) || 0, configKey);
+                      } else {
+                          input.value = item[col.field] || ''; input.className = 'w-full px-2 py-1 bg-transparent text-xs focus:outline-none border-b border-transparent hover:border-slate-200';
+                          if (col.placeholder) input.placeholder = col.placeholder;
+                          input.onchange = (e) => { 
+                              let val = e.target.value; 
+                              if(configKey === 'depot' && col.field === 'ticker') val = val.toUpperCase();
+                              handleTableUpdate(config.path, index, col.field, val, configKey); 
+                          };
+                      }
+                  }
+                  td.appendChild(input); tr.appendChild(td);
+              });
+              
+              const tdDel = document.createElement('td'); tdDel.className = 'text-right w-10';
+              const btnDel = document.createElement('button'); btnDel.className = 'text-rose-500 p-1 hover:bg-rose-50 rounded transition-colors';
+              btnDel.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>'; btnDel.onclick = () => handleTableDelete(config.path, index, configKey);
+              tdDel.appendChild(btnDel); tr.appendChild(tdDel); tbody.appendChild(tr);
+          });
+          lucide.createIcons();
+      }
+
+      function handleTableUpdate(path, index, field, value, configKey) { 
+          let target = state; path.forEach(p => target = target[p]); 
+          target[index][field] = value; 
+          
+          if (configKey === 'depot') {
+              target[index].value = (target[index].anzahl || 0) * (target[index].aktuellerPreis || 0);
+          }
+          
+          saveToLocalStorage(); updateCalculationsAndCharts(); 
+          if(configKey) renderGenericTable(configKey); 
+      }
+      
+      function handleTableDelete(path, index, configKey) { 
+          let target = state; path.forEach(p => target = target[p]); target.splice(index, 1); 
+          saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
+      }
+
+      // --- API REQUEST FÜR GITHUB PAGES & LOCALHOST ---
+      async function updateDepotPrices() {
+          const btn = document.getElementById('btn-update-prices');
+          const originalHtml = btn.innerHTML;
+          
+          btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade Kurse...';
+          lucide.createIcons();
+          
+          let failedItems = [];
+          let successCount = 0;
+          let totalCount = 0;
+
+          const tickersToFetch = [];
+          state.depot.forEach(item => {
+              if (item.ticker && item.ticker.trim() !== '') {
+                  totalCount++;
+                  tickersToFetch.push(item.ticker.trim().toUpperCase());
+              }
+          });
+
+          if (tickersToFetch.length === 0) {
+              btn.innerHTML = originalHtml;
+              lucide.createIcons();
+              return;
+          }
+
+          const fetchYahooData = async (targetUrl) => {
+              const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl + '&cb=' + Date.now())}`;
+              
+              const response = await fetch(proxyUrl);
+              if (!response.ok) throw new Error(`Netzwerkfehler: ${response.status}`);
+              
+              const rawData = await response.json();
+              if (rawData && rawData.contents) {
+                  return JSON.parse(rawData.contents);
+              }
+              throw new Error("Leere Antwort vom Proxy erhalten.");
+          };
+
+          try {
+              const symbolsStr = encodeURIComponent(tickersToFetch.join(','));
+              const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}`;
+              
+              const data = await fetchYahooData(targetUrl);
+              
+              if (!data || !data.quoteResponse || !data.quoteResponse.result) {
+                  throw new Error('Fehlerhafte oder leere Antwort von Yahoo Finance');
+              }
+
+              const results = data.quoteResponse.result;
+              const fetchedDataMap = new Map();
+              const currenciesNeeded = new Set();
+
+              results.forEach(res => {
+                  const sym = res.symbol.toUpperCase();
+                  fetchedDataMap.set(sym, res);
+                  if (res.currency && res.currency !== 'EUR') {
+                      currenciesNeeded.add(res.currency);
+                  }
+              });
+
+              const exchangeRates = new Map();
+              if (currenciesNeeded.size > 0) {
+                  btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade FX-Kurse...';
+                  lucide.createIcons();
+                  
+                  const fxTickers = Array.from(currenciesNeeded).map(c => `${c}EUR=X`);
+                  const fxSymbolsStr = encodeURIComponent(fxTickers.join(','));
+                  const fxTargetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${fxSymbolsStr}`;
+                  
+                  try {
+                      const fxData = await fetchYahooData(fxTargetUrl);
+                      if (fxData && fxData.quoteResponse && fxData.quoteResponse.result) {
+                          fxData.quoteResponse.result.forEach(fxRes => {
+                              const baseCurrency = fxRes.symbol.replace('EUR=X', '');
+                              exchangeRates.set(baseCurrency, fxRes.regularMarketPrice);
+                          });
+                      }
+                  } catch (fxError) {
+                      console.warn("Währungsabruf fehlgeschlagen.", fxError);
+                  }
+              }
+
+              state.depot.forEach(item => {
+                  if (!item.ticker || item.ticker.trim() === '') return;
+                  
+                  const t = item.ticker.trim().toUpperCase();
+                  const res = fetchedDataMap.get(t);
+                  
+                  if (res && typeof res.regularMarketPrice === 'number') {
+                      let priceInEur = res.regularMarketPrice;
+                      
+                      if (res.currency && res.currency !== 'EUR') {
+                          const rate = exchangeRates.get(res.currency);
+                          if (rate) priceInEur = priceInEur * rate;
+                          else { failedItems.push(item); return; }
+                      }
+                      
+                      item.aktuellerPreis = priceInEur;
+                      item.value = item.anzahl * priceInEur;
+                      successCount++;
+                  } else {
+                      failedItems.push(item);
+                  }
+              });
+
+          } catch (error) {
+              console.error("API Komplettausfall:", error);
+              state.depot.forEach(item => {
+                  if (item.ticker && item.ticker.trim() !== '') failedItems.push(item);
+              });
+          }
+
+          state.depotLastUpdate = new Date().toISOString();
+          saveToLocalStorage();
+          renderGenericTable('depot');
+          updateCalculationsAndCharts();
+          updateDepotTimestamp();
+
+          if (failedItems.length > 0 && successCount === 0) {
+              btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehlgeschlagen`;
+              btn.classList.replace('text-blue-700', 'text-rose-700');
+              btn.classList.replace('bg-blue-100', 'bg-rose-100');
+          } else if (failedItems.length > 0) {
+              btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Teilweise (${successCount}/${totalCount})`;
+              btn.classList.replace('text-blue-700', 'text-amber-700');
+              btn.classList.replace('bg-blue-100', 'bg-amber-100');
+          } else {
+              btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Erfolgreich (${successCount}/${totalCount})`;
+              btn.classList.replace('text-blue-700', 'text-emerald-700');
+              btn.classList.replace('bg-blue-100', 'bg-emerald-100');
+          }
+
+          setTimeout(() => {
+              btn.innerHTML = originalHtml;
+              btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm";
+              lucide.createIcons();
+          }, 4000);
+          
+          lucide.createIcons();
+      }
+
+      function updateDepotTimestamp() {
+          const el = document.getElementById('depot-last-update');
+          if(el) {
+              if (state.depotLastUpdate) {
+                  const d = new Date(state.depotLastUpdate);
+                  el.innerText = `Letzter Stand: ${d.toLocaleDateString('de-DE')} ${d.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'})} Uhr`;
+              } else {
+                  el.innerText = "Bisher keine Live-Aktualisierung";
+              }
+          }
+      }
+
+      function renderChildTrackerTables() {
+          const t1 = document.getElementById('child1-table-body'); const t2 = document.getElementById('child2-table-body'); if(!t1 || !t2) return;
+          t1.innerHTML = ''; t2.innerHTML = ''; let sum1 = 0; let sum2 = 0;
+          state.childExpenses.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+          state.childExpenses.forEach((e) => {
+              const tr = document.createElement('tr'); tr.className = 'border-b border-slate-100';
+              const tdDate = document.createElement('td'); tdDate.className = 'p-2 text-slate-500'; tdDate.textContent = e.date || '-';
+              const tdCat = document.createElement('td'); tdCat.className = 'p-2';
+              const spanCat = document.createElement('span'); spanCat.className = 'px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-semibold'; spanCat.textContent = e.category; tdCat.appendChild(spanCat);
+              const tdDesc = document.createElement('td'); tdDesc.className = 'p-2'; tdDesc.textContent = e.desc;
+              const tdAmount = document.createElement('td'); tdAmount.className = 'p-2 text-right font-semibold'; tdAmount.textContent = formatEuroDisplay(e.amount) + ' €';
+              const tdAction = document.createElement('td'); tdAction.className = 'p-2 text-right w-16';
+              const btnEdit = document.createElement('button'); btnEdit.className = 'text-indigo-400 hover:text-indigo-600 mr-2'; btnEdit.innerHTML = '<i data-lucide="edit-2" class="w-3.5 h-3.5"></i>'; btnEdit.onclick = () => editChildExpense(e.id);
+              const btnDel = document.createElement('button'); btnDel.className = 'text-rose-400 hover:text-rose-600'; btnDel.innerHTML = '<i data-lucide="trash-2" class="w-3.5 h-3.5"></i>'; btnDel.onclick = () => deleteChildExpense(e.id); 
+              tdAction.appendChild(btnEdit); tdAction.appendChild(btnDel); tr.appendChild(tdDate); tr.appendChild(tdCat); tr.appendChild(tdDesc); tr.appendChild(tdAmount); tr.appendChild(tdAction);
+              if(e.child === 'child1') { t1.appendChild(tr); sum1 += e.amount; } else { t2.appendChild(tr); sum2 += e.amount; }
+          });
+          document.getElementById('child1-total-badge').innerText = formatEuroDisplay(sum1) + " €"; document.getElementById('child2-total-badge').innerText = formatEuroDisplay(sum2) + " €"; lucide.createIcons();
+      }
+
+      function addRealEstate() { state.assets.realestate.push({ id: "re_"+Date.now(), name: "Immobilie", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('realestate'); updateCalculationsAndCharts(); }
+      function addLiability() { state.liabilities.push({ id: "lia_"+Date.now(), type: "Immobilienkredit", name: "Darlehen", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('liabilities'); updateCalculationsAndCharts(); }
+      function addInvestment() { state.investments.push({ id: "inv_"+Date.now(), type: "ETF-Sparplan", name: "Neu", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('investments'); updateCalculationsAndCharts(); }
+      function addCapitalGain() { state.capitalGains.push({ id: "cg_"+Date.now(), type: "Depot/Dividende", name: "Neu", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('capitalGains'); updateCalculationsAndCharts(); }
+      function addInsurance() { state.insurances.push({ id: "ins_"+Date.now(), type: "Hausrat", provider: "Anbieter", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('insurances'); updateCalculationsAndCharts(); }
+      function addCarExpense() { state.carExpenses.push({ id: "car_"+Date.now(), type: "Spritkosten", desc: "", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('carExpenses'); updateCalculationsAndCharts(); }
+      function addLeisureExpense() { state.leisureExpenses.push({ id: "lei_"+Date.now(), type: "Urlaub", desc: "", value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('leisureExpenses'); updateCalculationsAndCharts(); }
+      function addTagesgeld() { state.assets.tagesgeld.push({ id: "tg_"+Date.now(), bank: "Bank", interest: 0, value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('tagesgeld'); updateCalculationsAndCharts(); }
+      function addFestgeld() { state.assets.festgeld.push({ id: "fg_"+Date.now(), bank: "Bank", interest: 0, value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('festgeld'); updateCalculationsAndCharts(); }
+      
+      function addDepotAsset() { 
+          state.depot.push({ id: "dep_"+Date.now(), type: "Aktie", name: "Neu", bank: "", ticker: "", anzahl: 1, kaufpreis: 0, aktuellerPreis: 0, value: 0, owner: "both" }); 
+          saveToLocalStorage(); renderGenericTable('depot'); updateCalculationsAndCharts(); 
+      }
+      
+      function addImmoScenario() { state.immoPlanning.scenarios.push({ id: "sc_"+Date.now(), name: "Objekt", kaufpreis: 400000, finKosten: 2000, sonstigeKosten: 12000 }); saveToLocalStorage(); updateCalculationsAndCharts(); }
+      function deleteScenario(idx) { state.immoPlanning.scenarios.splice(idx,1); saveToLocalStorage(); updateCalculationsAndCharts(); }
+      function updateScenarioItem(idx, field, val) { state.immoPlanning.scenarios[idx][field] = val; saveToLocalStorage(); updateCalculationsAndCharts(); }
+
+      function renderThSotiList() { 
+          const container = document.getElementById('th-soti-list'); if (!container) return; container.innerHTML = '';
+          state.immoPlanning.sondertilgungen.forEach((soti, idx) => {
+              const rowDiv = document.createElement('div'); rowDiv.className = 'grid grid-cols-3 gap-1 items-center text-xs';
+              const sel = document.createElement('select'); sel.className = 'border border-slate-200 rounded p-0.5 bg-white text-[11px]';
+              sel.innerHTML = `<option value="once" ${soti.type==='once'?'selected':''}>Einmalig</option><option value="annual" ${soti.type==='annual'?'selected':''}>Jährlich</option>`;
+              sel.onchange = (e) => updateThSoti(idx, 'type', e.target.value);
+              const inpYear = document.createElement('input'); inpYear.type = 'number'; inpYear.value = soti.year; inpYear.className = 'border border-slate-200 rounded p-0.5 text-center text-[11px]';
+              inpYear.onchange = (e) => updateThSoti(idx, 'year', parseInt(e.target.value)||1);
+              const valContainer = document.createElement('div'); valContainer.className = 'flex items-center gap-1';
+              const inpVal = document.createElement('input'); inpVal.type = 'text'; inpVal.value = formatEuroDisplay(soti.value); inpVal.className = 'w-full border border-slate-200 rounded p-0.5 text-right text-[11px] focus:outline-none';
+              inpVal.onfocus = () => setupCurrencyFocus(inpVal); inpVal.onblur = () => { setupCurrencyBlur(inpVal); updateThSoti(idx, 'value', parseEuroInput(inpVal.value)); };
+              const btnDel = document.createElement('button'); btnDel.className = 'text-rose-500'; btnDel.innerHTML = '<i data-lucide="trash-2" class="w-3 h-3"></i>'; btnDel.onclick = () => deleteThSoti(idx);
+              valContainer.appendChild(inpVal); valContainer.appendChild(btnDel); rowDiv.appendChild(sel); rowDiv.appendChild(inpYear); rowDiv.appendChild(valContainer); container.appendChild(rowDiv);
+          });
+          lucide.createIcons();
+      }
+      function updateThSoti(idx, field, val) { state.immoPlanning.sondertilgungen[idx][field] = val; saveToLocalStorage(); updateThCalculations(); }
+      function deleteThSoti(idx) { state.immoPlanning.sondertilgungen.splice(idx, 1); saveToLocalStorage(); renderThSotiList(); updateThCalculations(); }
+      function addThSoti() { state.immoPlanning.sondertilgungen.push({ id: "soti_"+Date.now(), type: "once", year: 1, value: 1000 }); saveToLocalStorage(); renderThSotiList(); updateThCalculations(); }
+      
+      function setThModus(modus) {
+          state.immoPlanning.modus = modus;
+          if (modus === 'rate') { document.getElementById('th-tab-rate').className = "flex-1 text-center pb-3 th-tab-active transition-all"; document.getElementById('th-tab-laufzeit').className = "flex-1 text-center pb-3 text-slate-500 hover:text-slate-800 transition-all font-medium"; document.getElementById('th-wrapper-rate').classList.remove('hidden'); document.getElementById('th-wrapper-laufzeit').classList.add('hidden');
+          } else { document.getElementById('th-tab-laufzeit').className = "flex-1 text-center pb-3 th-tab-active transition-all"; document.getElementById('th-tab-rate').className = "flex-1 text-center pb-3 text-slate-500 hover:text-slate-800 transition-all font-medium"; document.getElementById('th-wrapper-laufzeit').classList.remove('hidden'); document.getElementById('th-wrapper-rate').classList.add('hidden'); }
+          saveToLocalStorage(); updateThCalculations();
+      }
+      function toggleVolltilger() { state.immoPlanning.volltilger = document.getElementById('th-volltilger').checked; saveToLocalStorage(); updateThCalculations(); }
+      
+      function setThView(view) {
+          if (view === 'chart') { document.getElementById('th-btn-view-chart').className = "px-4 pb-2 th-tab-active font-semibold"; document.getElementById('th-btn-view-table').className = "px-4 pb-2 text-slate-500 font-medium"; document.getElementById('th-view-chart').classList.remove('hidden'); document.getElementById('th-view-table').classList.add('hidden');
+          } else { document.getElementById('th-btn-view-table').className = "px-4 pb-2 th-tab-active font-semibold"; document.getElementById('th-btn-view-chart').className = "px-4 pb-2 text-slate-500 font-medium"; document.getElementById('th-view-table').classList.remove('hidden'); document.getElementById('th-view-chart').classList.add('hidden'); }
+      }
+      function loadScenarioToRechner(kaufpreis) { document.getElementById('th-kaufpreis').value = formatEuroDisplay(kaufpreis); updateThCalculations(); switchTab('immo'); window.scrollTo(0, document.getElementById('th-kaufpreis').offsetTop); }
+
+      function logChildExpense() {
+          const child = document.getElementById('ch-select').value; const category = document.getElementById('ch-category').value;
+          const desc = document.getElementById('ch-desc').value.trim(); const amount = parseEuroInput(document.getElementById('ch-amount').value);
+          const dateVal = document.getElementById('ch-date').value || new Date().toISOString().split('T')[0];
+          if(!desc || amount <= 0) return;
+          state.childExpenses.push({ id: "ch_"+Date.now(), child, category, desc, amount, date: dateVal });
+          document.getElementById('ch-desc').value = ''; document.getElementById('ch-amount').value = '0,00'; document.getElementById('ch-date').value = new Date().toISOString().split('T')[0];
+          saveToLocalStorage(); updateCalculationsAndCharts();
+      }
+
+      function editChildExpense(id) {
+          const idx = state.childExpenses.findIndex(e => e.id === id); if (idx === -1) return; const e = state.childExpenses[idx];
+          document.getElementById('ch-select').value = e.child; document.getElementById('ch-category').value = e.category; document.getElementById('ch-desc').value = e.desc; document.getElementById('ch-amount').value = formatEuroDisplay(e.amount); document.getElementById('ch-date').value = e.date || new Date().toISOString().split('T')[0];
+          state.childExpenses.splice(idx, 1); saveToLocalStorage(); updateCalculationsAndCharts(); window.scrollTo(0, document.getElementById('ch-date').offsetTop - 50);
+      }
+      function deleteChildExpense(id) { state.childExpenses = state.childExpenses.filter(e => e.id !== id); saveToLocalStorage(); updateCalculationsAndCharts(); }
+
+      function updateCalculationsAndCharts() {
+          const fixedIncH = state.income.husbandAnnual / 12 + state.income.elterngeldHusbandAnnual / 12; const fixedIncW = state.income.wifeAnnual / 12 + state.income.elterngeldWifeAnnual / 12; const fixedIncB = (state.income.kindergeldAnnual / 12) + (state.income.otherAnnual / 12);
+          updateCategorySum('sum-inc-fixed', fixedIncH, fixedIncW, fixedIncB);
+          let incH = fixedIncH; let incW = fixedIncW; let incB = fixedIncB;
+          
+          let grossCapH=0, grossCapW=0, grossCapB=0;
+          state.capitalGains.forEach(cg => { if(cg.owner === 'husband') grossCapH += cg.value; else if(cg.owner === 'wife') grossCapW += cg.value; else grossCapB += cg.value; });
+          let capH = grossCapH, capW = grossCapW, capB = grossCapB;
+          
+          if (state.settings.applyCapitalGainsTax) {
+              let totalGross = grossCapH + grossCapW + grossCapB;
+              if (totalGross > 2000) {
+                  let totalTax = (totalGross - 2000) * 0.26375; let totalNet = totalGross - totalTax;
+                  capH = (grossCapH / totalGross) * totalNet; capW = (grossCapW / totalGross) * totalNet; capB = (grossCapB / totalGross) * totalNet;
+              }
+          }
+          capH = capH / 12; capW = capW / 12; capB = capB / 12;
+          incH += capH; incW += capW; incB += capB;
+          updateCategorySum('sum-inc-cap', capH, capW, capB);
+
+          const mtlIncome = incH + incW + incB; 
+          let expH = 0, expW = 0, expB = 0;
+          
+          let rentH=0, rentW=0, rentB=0;
+          if(state.expenses.rentOwner === 'husband') rentH += state.expenses.rent; else if(state.expenses.rentOwner === 'wife') rentW += state.expenses.rent; else rentB += state.expenses.rent;
+          if(state.expenses.householdOwner === 'husband') rentH += state.expenses.household; else if(state.expenses.householdOwner === 'wife') rentW += state.expenses.household; else rentB += state.expenses.household;
+          updateCategorySum('sum-exp-wohnen', rentH, rentW, rentB); expH += rentH; expW += rentW; expB += rentB;
+
+          const arraysToSum = [ { arr: state.investments, badgeId: 'sum-exp-vorsorge' }, { arr: state.insurances, badgeId: 'sum-exp-vers' }, { arr: state.carExpenses, badgeId: 'sum-exp-auto' }, { arr: state.leisureExpenses, badgeId: 'sum-exp-freizeit' } ];
+          arraysToSum.forEach(pipeline => {
+              let p_H=0, p_W=0, p_B=0;
+              if(pipeline.arr) { pipeline.arr.forEach(item => { if(item.owner === 'husband') p_H += item.value; else if(item.owner === 'wife') p_W += item.value; else p_B += item.value; }); }
+              updateCategorySum(pipeline.badgeId, p_H, p_W, p_B); expH += p_H; expW += p_W; expB += p_B;
+          });
+
+          const mtlExpenses = expH + expW + expB;
+          let astH = 0, astW = 0, astB = 0;
+          
+          let a_reH=0, a_reW=0, a_reB=0; if(state.assets.realestate) state.assets.realestate.forEach(i => { if(i.owner==='husband') a_reH+=i.value; else if(i.owner==='wife') a_reW+=i.value; else a_reB+=i.value; }); updateCategorySum('sum-ast-immo', a_reH, a_reW, a_reB); astH += a_reH; astW += a_reW; astB += a_reB;
+          let a_tgH=0, a_tgW=0, a_tgB=0; if(state.assets.tagesgeld) state.assets.tagesgeld.forEach(i => { if(i.owner==='husband') a_tgH+=i.value; else if(i.owner==='wife') a_tgW+=i.value; else a_tgB+=i.value; }); updateCategorySum('sum-ast-tg', a_tgH, a_tgW, a_tgB); astH += a_tgH; astW += a_tgW; astB += a_tgB;
+          let a_fgH=0, a_fgW=0, a_fgB=0; if(state.assets.festgeld) state.assets.festgeld.forEach(i => { if(i.owner==='husband') a_fgH+=i.value; else if(i.owner==='wife') a_fgW+=i.value; else a_fgB+=i.value; }); updateCategorySum('sum-ast-fg', a_fgH, a_fgW, a_fgB); astH += a_fgH; astW += a_fgW; astB += a_fgB;
+          
+          let a_dpH=0, a_dpW=0, a_dpB=0; if(state.depot) state.depot.forEach(i => { if(i.owner==='husband') a_dpH+=i.value; else if(i.owner==='wife') a_dpW+=i.value; else a_dpB+=i.value; }); updateCategorySum('sum-ast-depot', a_dpH, a_dpW, a_dpB); astH += a_dpH; astW += a_dpW; astB += a_dpB;
+
+          const totalAssets = astH + astW + astB;
+          let liaH = 0, liaW = 0, liaB = 0; if(state.liabilities) { state.liabilities.forEach(l => { if(l.owner === 'husband') liaH += l.value; else if(l.owner === 'wife') liaW += l.value; else liaB += l.value; }); } updateCategorySum('sum-lia', liaH, liaW, liaB);
+
+          const totalLiabilities = liaH + liaW + liaB; const netWorth = totalAssets - totalLiabilities;
+          const netH = astH - liaH; const netW = astW - liaW; const netB = astB - liaB;
+
+          document.getElementById('kpi-income').innerText = formatEuroDisplay(mtlIncome) + " €"; document.getElementById('kpi-expenses').innerText = formatEuroDisplay(mtlExpenses) + " €"; document.getElementById('kpi-assets').innerText = formatEuroDisplay(netWorth) + " €";
+
+          document.getElementById('split-inc-husband').innerText = formatEuroDisplay(incH) + " €"; document.getElementById('split-inc-wife').innerText = formatEuroDisplay(incW) + " €"; document.getElementById('split-inc-both').innerText = formatEuroDisplay(incB) + " €";
+          document.getElementById('split-exp-husband').innerText = formatEuroDisplay(expH) + " €"; document.getElementById('split-exp-wife').innerText = formatEuroDisplay(expW) + " €"; document.getElementById('split-exp-both').innerText = formatEuroDisplay(expB) + " €";
+          document.getElementById('split-ast-husband').innerText = formatEuroDisplay(astH) + " €"; document.getElementById('split-ast-wife').innerText = formatEuroDisplay(astW) + " €"; document.getElementById('split-ast-both').innerText = formatEuroDisplay(astB) + " €";
+          document.getElementById('split-lia-husband').innerText = formatEuroDisplay(liaH) + " €"; document.getElementById('split-lia-wife').innerText = formatEuroDisplay(liaW) + " €"; document.getElementById('split-lia-both').innerText = formatEuroDisplay(liaB) + " €";
+          document.getElementById('split-net-husband').innerText = formatEuroDisplay(netH) + " €"; document.getElementById('split-net-wife').innerText = formatEuroDisplay(netW) + " €"; document.getElementById('split-net-both').innerText = formatEuroDisplay(netB) + " €";
+
+          const tragbareLast = Math.max(0, mtlIncome - mtlExpenses); let immoGesamtValue = a_reH + a_reW + a_reB; let totalEK = astH + astW + astB;
+          if(!state.settings.includeImmoInEK) { totalEK -= immoGesamtValue; }
+          
+          if(document.getElementById('immo-calc-ek')) { 
+              document.getElementById('immo-calc-ek').innerText = formatEuroDisplay(totalEK) + " €"; document.getElementById('immo-calc-tragbarkeit').innerText = formatEuroDisplay(tragbareLast) + " €"; 
+              const zinsPlusTilgung = (state.immoPlanning.sollzins || 3.69) + (state.immoPlanning.tilgung || 1.4); const maxDarlehen = zinsPlusTilgung > 0 ? (tragbareLast * 12 * 100) / zinsPlusTilgung : 0; document.getElementById('immo-calc-max-loan').innerText = formatEuroDisplay(maxDarlehen) + " €";
+              const maxKaufpreis = maxDarlehen + totalEK; const elMaxKaufpreis = document.getElementById('immo-calc-max-kaufpreis'); if (elMaxKaufpreis) elMaxKaufpreis.innerText = formatEuroDisplay(maxKaufpreis) + " €";
+          }
+
+          const container = document.getElementById('immo-scenarios-container');
+          if(container && state.immoPlanning.scenarios) {
+              container.innerHTML = '';
+              state.immoPlanning.scenarios.forEach((sc, idx) => {
+                  const grunderwerb = sc.kaufpreis * 0.035; const makler = sc.kaufpreis * 0.0357; const grundbuch = sc.kaufpreis * 0.015; const totalCost = sc.kaufpreis + grunderwerb + makler + grundbuch + sc.finKosten + sc.sonstigeKosten;
+                  const loanNeeded = Math.max(0, totalCost - Math.max(0, (totalEK - state.immoPlanning.sicherheitsreserve))); const estRate = (loanNeeded * ((state.immoPlanning.sollzins + state.immoPlanning.tilgung)/100)) / 12; const ok = estRate <= tragbareLast;
+                  container.innerHTML += `
+                      <div class="bg-white p-5 rounded-xl border ${ok?'border-emerald-200 bg-emerald-50/5':'border-rose-200 bg-rose-50/5'} shadow-xs relative">
+                          <button onclick="deleteScenario(${idx})" class="absolute top-3 right-3 text-slate-300 hover:text-rose-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+                          <input type="text" value="${escapeHTML(sc.name)}" onchange="updateScenarioItem(${idx}, 'name', this.value)" class="font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 text-sm focus:outline-none w-5/6 mb-2">
+                          <div class="space-y-1 text-xs">
+                              <div class="flex justify-between items-center mb-1"><span>Kaufpreis:</span><div class="flex items-center gap-1"><input type="text" value="${formatEuroDisplay(sc.kaufpreis)}" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateScenarioItem(${idx}, 'kaufpreis', parseEuroInput(this.value))" class="w-28 text-right border-b border-slate-200 font-semibold bg-transparent focus:outline-none"><span>€</span></div></div>
+                              <div class="flex justify-between text-slate-400"><span>Nebenkosten (Bayern):</span><span>${formatEuroDisplay(grunderwerb+makler+grundbuch)} €</span></div>
+                              <div class="flex justify-between font-medium"><span>Gesamtkosten:</span><span>${formatEuroDisplay(totalCost)} €</span></div>
+                              <div class="flex justify-between text-indigo-600 font-medium"><span>Finanzbedarf:</span><span>${formatEuroDisplay(loanNeeded)} €</span></div>
+                              <div class="flex justify-between pt-1 border-t border-slate-100 font-bold ${ok?'text-emerald-600':'text-rose-600'}"><span>Est. Kreditrate:</span><span>${formatEuroDisplay(Math.round(estRate))} € / mtl.</span></div>
+                          </div>
+                          <button onclick="loadScenarioToRechner(${sc.kaufpreis})" class="w-full mt-3 py-1 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-600 font-medium text-[10px] rounded transition-all">In Tilgungsrechner laden</button>
+                      </div>`;
+              });
+          }
+
+          const c1 = state.childExpenses.filter(e => e.child=='child1').reduce((a,b)=>a+b.amount,0); const c2 = state.childExpenses.filter(e => e.child=='child2').reduce((a,b)=>a+b.amount,0);
+          const fStatus = document.getElementById('fairness-status');
+          if(fStatus) {
+              fStatus.innerHTML = c1 === c2 ? 'Perfekte Balance.' : `Ausgleich nötig: Differenz beträgt ${formatEuroDisplay(Math.abs(c1-c2))} €`;
+              fStatus.className = c1===c2 ? "p-3 rounded-xl bg-emerald-50 text-emerald-800 border text-xs" : "p-3 rounded-xl bg-amber-50 text-amber-800 border text-xs";
+          }
+
+          state.calculated = { mtlIncome: mtlIncome, mtlExpenses: mtlExpenses };
+          renderChildTrackerTables();
+          if(!document.getElementById('app-wrapper').classList.contains('hidden')) { initCharts(); initWealthProjectionChart(); updateThCalculations(); }
+      }
+
+      function updateThCalculations() { 
+          if(!document.getElementById('th-kaufpreis')) return;
+          const kaufpreis = parseEuroInput(document.getElementById('th-kaufpreis').value); const eigenkapital = parseEuroInput(document.getElementById('th-eigenkapital').value); const sollzins = state.immoPlanning.sollzins || 3.69; const zinsbindung = parseInt(document.getElementById('th-zinsbindung').value) || 10;
+          state.immoPlanning.lastKaufpreis = kaufpreis; state.immoPlanning.lastEigenkapital = eigenkapital; saveToLocalStorage();
+
+          const grunderwerb = kaufpreis * 0.035; const makler = kaufpreis * 0.0357; const grundbuch = kaufpreis * 0.015; const darlehen = Math.max(0, (kaufpreis + grunderwerb + makler + grundbuch) - eigenkapital);
+          document.getElementById('th-out-loan').innerText = formatEuroDisplay(darlehen) + " €"; document.getElementById('th-out-zins').innerText = sollzins.toFixed(2) + " %";
+
+          let monthlyPayment = 0; let initialTilgungPct = 0; let totalYears = 0; let totalMonths = 0; const r = (sollzins / 100) / 12;
+          if (darlehen <= 0) { renderInterhypChart(zinsbindung); return; }
+
+          if (state.immoPlanning.volltilger) { const n = zinsbindung * 12; monthlyPayment = r > 0 ? (darlehen * r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1) : darlehen / n; initialTilgungPct = ((monthlyPayment * 12 - darlehen * (sollzins/100)) / darlehen) * 100; totalYears = zinsbindung; totalMonths = 0;
+          } else if (state.immoPlanning.modus === 'laufzeit') { const wunschJahre = parseInt(document.getElementById('th-laufzeit').value) || 35; const n = wunschJahre * 12; monthlyPayment = r > 0 ? (darlehen * r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1) : darlehen / n; initialTilgungPct = ((monthlyPayment * 12 - darlehen * (sollzins/100)) / darlehen) * 100; totalYears = wunschJahre; totalMonths = 0;
+          } else { monthlyPayment = parseEuroInput(document.getElementById('th-rate').value); if(monthlyPayment <= 0) monthlyPayment = (darlehen * ((sollzins + 1.5)/100)) / 12; initialTilgungPct = ((monthlyPayment * 12 - darlehen * (sollzins/100)) / darlehen) * 100; }
+
+          let balance = darlehen; let kumTilgung = 0; let kumZinsen = 0; activeThSchedule = []; activeThSchedule.push({ month: 0, dateStr: "Heute", restschuld: balance, kumTilgung: 0, kumZinsen: 0, phase: 'fixed' });
+          let m = 1; const maxM = 600; const monthsNames = ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez."]; let startMonthIndex = 6; let startYear = 2026;
+
+          while (balance > 0 && m <= maxM) {
+              let zinsMtl = balance * r; let tilgungMtl = monthlyPayment - zinsMtl; if (tilgungMtl > balance) tilgungMtl = balance; if (tilgungMtl <= 0 && balance > 0) break;
+              balance -= tilgungMtl; kumTilgung += tilgungMtl; kumZinsen += zinsMtl;
+              if(state.immoPlanning.sondertilgungen) { state.immoPlanning.sondertilgungen.forEach(soti => { let sotiMatch = false; const currentYearOfLoan = Math.ceil(m / 12); if (soti.type === 'once' && m === soti.year * 12) sotiMatch = true; if (soti.type === 'annual' && m % 12 === 0 && currentYearOfLoan >= soti.year) sotiMatch = true; if (sotiMatch) { let actualSoti = Math.min(balance, soti.value); balance -= actualSoti; kumTilgung += actualSoti; } }); }
+              let mIdx = (startMonthIndex + m) % 12; let yOffset = Math.floor((startMonthIndex + m) / 12); let dateStr = `${monthsNames[mIdx]} ${startYear + yOffset}`; activeThSchedule.push({ month: m, dateStr: dateStr, restschuld: balance, kumTilgung: kumTilgung, kumZinsen: kumZinsen, phase: (m <= zinsbindung * 12) ? 'fixed' : 'rephi' }); if (balance <= 0) break; m++;
+          }
+
+          if (state.immoPlanning.modus === 'rate' && !state.immoPlanning.volltilger) { totalYears = Math.floor((activeThSchedule.length - 1) / 12); totalMonths = (activeThSchedule.length - 1) % 12; }
+          if (state.immoPlanning.modus === 'laufzeit' || state.immoPlanning.volltilger) { document.getElementById('th-output-label').innerText = "Monatliche Kreditrate"; document.getElementById('th-output-hero').innerText = formatEuroDisplay(Math.round(monthlyPayment)) + " €";
+          } else { document.getElementById('th-output-label').innerText = "Berechnete Gesamtlaufzeit"; document.getElementById('th-output-hero').innerText = `${totalYears} J., ${totalMonths} M.`; }
+          document.getElementById('th-out-term').innerText = `${totalYears} Jahre` + (totalMonths > 0 ? `, ${totalMonths} Monate` : ''); document.getElementById('th-out-tilgung').innerText = initialTilgungPct.toFixed(2) + " %";
+
+          const tableBody = document.getElementById('th-table-amortization-rows');
+          if(tableBody) { tableBody.innerHTML = ''; activeThSchedule.forEach(row => { if(row.month % 12 === 0 || row.restschuld === 0) { tableBody.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2 font-medium">${row.dateStr}</td><td class="p-2 text-right">${formatEuroDisplay(Math.round(row.restschuld))} €</td><td class="p-2 text-right text-emerald-600">${formatEuroDisplay(Math.round(row.kumTilgung))} €</td><td class="p-2 text-right text-rose-500">${formatEuroDisplay(Math.round(row.kumZinsen))} €</td></tr>`; } }); }
+          renderInterhypChart(zinsbindung);
+      }
+
+      function renderInterhypChart(zinsbindung) { 
+          const ctx = document.getElementById('chartInterhypRepayment'); if(!ctx) return; const boundMonth = zinsbindung * 12;
+          let labels = activeThSchedule.map(r => r.dateStr); let fixedData = activeThSchedule.map(r => r.month <= boundMonth ? r.restschuld : null); let rephiData = activeThSchedule.map(r => r.month >= boundMonth ? r.restschuld : null); const tooltipEl = document.getElementById('th-custom-tooltip');
+          if(charts.interhyp) { charts.interhyp.data.labels = labels; charts.interhyp.data.datasets[0].data = fixedData; charts.interhyp.data.datasets[1].data = rephiData; charts.interhyp.update();
+          } else { charts.interhyp = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Sollzinsbindung', data: fixedData, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.06)', fill: true, tension: 0.1, pointRadius: 0, hitRadius: 10 }, { label: 'Anschlussfinanzierung', data: rephiData, borderColor: '#94a3b8', backgroundColor: 'rgba(148, 163, 184, 0.03)', fill: true, borderDash: [6, 4], tension: 0.1, pointRadius: 0, hitRadius: 10 }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, datalabels: { display: false }, tooltip: { enabled: false, external: function(context) { const {chart, tooltip} = context; if (tooltip.opacity === 0) { tooltipEl.classList.add('hidden'); return; } const dataIndex = tooltip.dataPoints[0].dataIndex; const dataPoint = activeThSchedule[dataIndex]; if(!dataPoint) return; tooltipEl.innerHTML = `<div class="font-bold text-slate-800 text-sm mb-2">${escapeHTML(dataPoint.dateStr)}</div><div class="space-y-1 text-slate-600 text-xs"><div class="flex justify-between gap-4"><span>Restschuld:</span> <span class="font-semibold text-slate-900">${formatEuroDisplay(Math.round(dataPoint.restschuld))} €</span></div><div class="flex justify-between gap-4"><span>Getilgt:</span> <span class="font-semibold text-emerald-600">${formatEuroDisplay(Math.round(dataPoint.kumTilgung))} €</span></div><div class="flex justify-between gap-4"><span>Zinsen:</span> <span class="font-semibold text-rose-500">${formatEuroDisplay(Math.round(dataPoint.kumZinsen))} €</span></div></div>`; const position = chart.canvas.getBoundingClientRect(); tooltipEl.style.left = position.left + window.pageXOffset + tooltip.caretX + 15 + 'px'; tooltipEl.style.top = position.top + window.pageYOffset + tooltip.caretY - 40 + 'px'; tooltipEl.classList.remove('hidden'); } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 6, font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } } }); }
+      }
+
+      function initWealthProjectionChart() { 
+          const ctx = document.getElementById('chartWealthProjection'); if(!ctx) return;
+          const rTg = (parseFloat(document.getElementById('proj-return-tg').value) || 2.5) / 100; const rFg = (parseFloat(document.getElementById('proj-return-fg').value) || 3.5) / 100; const rDep = (parseFloat(document.getElementById('proj-return-depot').value) || 6.0) / 100; const inflationRate = (parseFloat(document.getElementById('proj-inflation').value) || 2.0) / 100;
+          let baseTgNominal = state.assets.tagesgeld ? state.assets.tagesgeld.reduce((s,i)=>s+i.value,0) : 0; let baseFgNominal = state.assets.festgeld ? state.assets.festgeld.reduce((s,i)=>s+i.value,0) : 0; let baseDepNominal = state.depot ? state.depot.reduce((s,i)=>s+i.value,0) : 0;
+          let baseTgReal = baseTgNominal; let baseFgReal = baseFgNominal; let baseDepReal = baseDepNominal; let mtlSparrate = state.investments ? state.investments.reduce((s,i)=>s+i.value,0) : 0; const jahresSparsumme = mtlSparrate * 12;
+          let nominalLabels = ["Heute"]; let nominalData = [baseTgNominal + baseFgNominal + baseDepNominal]; let realData = [baseTgNominal + baseFgNominal + baseDepNominal];
+          for (let j = 1; j <= 30; j++) { nominalLabels.push(2026 + j); baseTgNominal *= (1 + rTg); baseFgNominal *= (1 + rFg); baseDepNominal = baseDepNominal * (1 + rDep) + jahresSparsumme; nominalData.push(Math.round(baseTgNominal + baseFgNominal + baseDepNominal)); baseTgReal *= (1 + (rTg - inflationRate)); baseFgReal *= (1 + (rFg - inflationRate)); baseDepReal = baseDepReal * (1 + (rDep - inflationRate)) + jahresSparsumme; realData.push(Math.round(baseTgReal + baseFgReal + baseDepReal)); }
+          if(charts.wealthProjection) { charts.wealthProjection.data.labels = nominalLabels; charts.wealthProjection.data.datasets[0].data = nominalData; charts.wealthProjection.data.datasets[1].data = realData; charts.wealthProjection.update(); } else { charts.wealthProjection = new Chart(ctx, { type: 'line', data: { labels: nominalLabels, datasets: [{ label: 'Nominales Brutto-Vermögen', data: nominalData, borderColor: '#10b981', backgroundColor: 'transparent', tension: 0.15 }, { label: 'Reale Kaufkraft (nach Inflation)', data: realData, borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [4, 4], tension: 0.15 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { labels: { font: { size: 10 } } } }, scales: { x: { ticks: { font: { size: 9 } } }, y: { ticks: { font: { size: 9 } } } } } }); }
+      }
+
+      function initCharts() { 
+          const ctxCf = document.getElementById('chartCashflow'); const ctxExSt = document.getElementById('chartExpenseStructure'); const ctxAsset = document.getElementById('chartAssetAllocation'); const ctxDepot = document.getElementById('chartDepotAllocation'); const ctxChildren = document.getElementById('chartChildren');
+          if(!ctxCf || !ctxAsset || !ctxDepot || !ctxChildren || !ctxExSt) return;
+          const mtlInc = state.calculated ? state.calculated.mtlIncome : 0; const mtlExp = state.calculated ? state.calculated.mtlExpenses : 0; const standardChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } };
+          if(charts.cashflow) { charts.cashflow.data.datasets[0].data = [mtlExp, Math.max(0, mtlInc-mtlExp)]; charts.cashflow.update(); } else { charts.cashflow = new Chart(ctxCf, { type: 'doughnut', data: { labels: ['Kosten & Sparen', 'Freier Cashflow'], datasets: [{ data: [mtlExp, Math.max(0, mtlInc-mtlExp)], backgroundColor: ['#ef4444', '#10b981'], borderWidth: 0 }] }, options: standardChartOptions }); }
+          const sumMiete = state.expenses.rent || 0; const sumHaushalt = state.expenses.household || 0; const sumInvest = state.investments.reduce((s,i)=>s+i.value,0); const sumInsur = state.insurances.reduce((s,i)=>s+i.value,0); const sumCar = state.carExpenses.reduce((s,i)=>s+i.value,0); const sumLeisure = state.leisureExpenses.reduce((s,i)=>s+i.value,0);
+          if(charts.expenseStructure) { charts.expenseStructure.data.datasets[0].data = [sumMiete, sumHaushalt, sumInvest, sumInsur, sumCar, sumLeisure]; charts.expenseStructure.update(); } else { charts.expenseStructure = new Chart(ctxExSt, { type: 'doughnut', data: { labels: ['Wohnen', 'Haushalt', 'Sparen', 'Versicherung', 'Auto', 'Freizeit'], datasets: [{ data: [sumMiete, sumHaushalt, sumInvest, sumInsur, sumCar, sumLeisure], backgroundColor: ['#f43f5e', '#fda4af', '#10b981', '#3b82f6', '#64748b', '#f59e0b'], borderWidth: 0 }] }, options: standardChartOptions }); }
+          const tg = state.assets.tagesgeld ? state.assets.tagesgeld.reduce((s,i)=>s+i.value,0) : 0; const fg = state.assets.festgeld ? state.assets.festgeld.reduce((s,i)=>s+i.value,0) : 0; const dp = state.depot.reduce((s,i)=>s+i.value,0); const re = state.assets.realestate ? state.assets.realestate.reduce((s,i)=>s+i.value,0) : 0;
+          if(charts.assets) { charts.assets.data.datasets[0].data = [tg, fg, dp, re]; charts.assets.update(); } else { charts.assets = new Chart(ctxAsset, { type: 'pie', data: { labels: ['Tagesgeld', 'Festgeld', 'Depot', 'Immobilien'], datasets: [{ data: [tg, fg, dp, re], backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f59e0b'], borderWidth: 0 }] }, options: standardChartOptions }); }
+          const depotLabels = state.depot.length > 0 ? state.depot.map(i => i.name) : ['Keine Werte']; const depotData = state.depot.length > 0 ? state.depot.map(i => i.value) : [1]; const depotColors = state.depot.length > 0 ? ['#10b981', '#34d399', '#6ee7b7', '#059669'] : ['#e2e8f0'];
+          if(charts.depot) { charts.depot.data.labels = depotLabels; charts.depot.data.datasets[0].data = depotData; charts.depot.data.datasets[0].backgroundColor = depotColors; charts.depot.update(); } else { charts.depot = new Chart(ctxDepot, { type: 'doughnut', data: { labels: depotLabels, datasets: [{ data: depotData, backgroundColor: depotColors, borderWidth: 0 }] }, options: standardChartOptions }); }
+          const sumChild1 = state.childExpenses.filter(e => e.child === 'child1').reduce((a,b) => a + b.amount, 0); const sumChild2 = state.childExpenses.filter(e => e.child === 'child2').reduce((a,b) => a + b.amount, 0);
+          if(charts.children) { charts.children.data.labels = [state.settings.names.child1, state.settings.names.child2]; charts.children.data.datasets[0].data = [sumChild1, sumChild2]; charts.children.update(); } else { charts.children = new Chart(ctxChildren, { type: 'doughnut', data: { labels: [state.settings.names.child1, state.settings.names.child2], datasets: [{ data: [sumChild1, sumChild2], backgroundColor: ['#6366f1', '#10b981'], borderWidth: 0 }] }, options: standardChartOptions }); }
+      }
+
+      function generateFinancialReportPDF(btnElement) {
+          const originalText = btnElement.innerHTML; btnElement.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Bereite vor...'; lucide.createIcons();
+          setTimeout(() => {
+              const activeTab = document.querySelector('main > div:not(.hidden)'); if (!activeTab) { alert("Fehler: Kein aktiver Reiter gefunden."); btnElement.innerHTML = originalText; lucide.createIcons(); return; }
+              const allTabs = document.querySelectorAll('main > div');
+              allTabs.forEach(tab => { if (tab !== activeTab && tab.id !== 'lock-screen') { tab.dataset.wasHidden = tab.classList.contains('hidden') ? 'true' : 'false'; tab.classList.add('hidden'); } });
+              const tabTitleElement = activeTab.querySelector('h1, h2'); const tabTitleText = tabTitleElement ? tabTitleElement.innerText : "Finanzbericht";
+              const originalDocTitle = document.title; document.title = `FamFinanz_${tabTitleText.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}`;
+              window.print();
+              setTimeout(() => { allTabs.forEach(tab => { if (tab !== activeTab && tab.dataset.wasHidden === 'false' && tab.id !== 'lock-screen') { tab.classList.remove('hidden'); } }); document.title = originalDocTitle; btnElement.innerHTML = originalText; lucide.createIcons(); }, 500);
+          }, 100);
+      }
+  </script>
+</body>
+</html>
