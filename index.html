@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-title" content="FamFinanz Pro">
   <meta name="theme-color" content="#4f46e5">
 
-  <!-- Dynamisches Web-App Manifest (Data URI) -->
-  <link rel="manifest" href='data:application/json,{"name":"FamFinanz Pro","short_name":"FamFinanz","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#4f46e5"}'>
+ <!-- Dynamisches Web-App Manifest -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"FamFinanz Pro","short_name":"FamFinanz","start_url":".","display":"standalone","background_color":"%23f8fafc","theme_color":"%234f46e5"}'>
   
   <!-- External CDN Dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -1546,7 +1546,7 @@
           saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
       }
 
-      // --- ROBUSTE MULTI-PROXY API INTEGRATION (Für GitHub Pages optimiert) ---
+     // --- ROBUSTER KOSTENLOSER YAHOO-FINANCE FETCH (JSONP & Multi-Proxy) ---
       async function updateDepotPrices() {
           const btn = document.getElementById('btn-update-prices');
           const originalHtml = btn.innerHTML;
@@ -1572,58 +1572,108 @@
               return;
           }
 
-          // Hilfsfunktion: Probier der Reihe nach 4 verschiedene Proxy-Dienste durch
-          const fetchYahooDataWithFallback = async (targetUrl) => {
-              const cacheBusterUrl = targetUrl + '&cb=' + Date.now();
-              const proxies = [
-                  // Proxy 1: CorsProxy.io
-                  async (u) => {
-                      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`);
-                      if (!res.ok) throw new Error(`Status ${res.status}`);
-                      return await res.json();
-                  },
-                  // Proxy 2: AllOrigins JSON API
-                  async (u) => {
-                      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
-                      if (!res.ok) throw new Error(`Status ${res.status}`);
-                      const data = await res.json();
-                      if (data && data.contents) return JSON.parse(data.contents);
-                      throw new Error("Leere Antowrt");
-                  },
-                  // Proxy 3: CodeTabs Proxy
-                  async (u) => {
-                      const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`);
-                      if (!res.ok) throw new Error(`Status ${res.status}`);
-                      return await res.json();
-                  },
-                  // Proxy 4: JSONP / Direct AllOrigins Raw
-                  async (u) => {
-                      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
-                      if (!res.ok) throw new Error(`Status ${res.status}`);
-                      return await res.json();
-                  }
-              ];
+          // Hilfsfunktion: Lädt Daten via JSONP (umgeht CORS-Policy auf GitHub Pages komplett)
+          const fetchJsonp = (url) => {
+              return new Promise((resolve, reject) => {
+                  const callbackName = 'yahoo_cb_' + Math.random().toString(36).substring(2, 10);
+                  const script = document.createElement('script');
+                  
+                  const timeout = setTimeout(() => {
+                      delete window[callbackName];
+                      if (script.parentNode) script.parentNode.removeChild(script);
+                      reject(new Error('JSONP Timeout'));
+                  }, 6000);
 
-              for (let i = 0; i < proxies.length; i++) {
-                  try {
-                      console.log(`📡 Teste Proxy-Dienst #${i + 1}...`);
-                      const result = await proxies[i](cacheBusterUrl);
-                      if (result && (result.quoteResponse || result.chart)) {
-                          console.log(`✅ Proxy-Dienst #${i + 1} erfolgreich!`);
-                          return result;
+                  window[callbackName] = (data) => {
+                      clearTimeout(timeout);
+                      delete window[callbackName];
+                      if (script.parentNode) script.parentNode.removeChild(script);
+                      resolve(data);
+                  };
+
+                  const separator = url.includes('?') ? '&' : '?';
+                  script.src = `${url}${separator}callback=${callbackName}&_=${Date.now()}`;
+                  script.onerror = () => {
+                      clearTimeout(timeout);
+                      delete window[callbackName];
+                      if (script.parentNode) script.parentNode.removeChild(script);
+                      reject(new Error('Script Load Error'));
+                  };
+
+                  document.body.appendChild(script);
+              });
+          };
+
+          // Haupt-Fetch-Strategie mit Fallbacks
+          const fetchYahooDataWithFallback = async (symbols) => {
+              const symbolsStr = encodeURIComponent(symbols.join(','));
+              
+              // Strategie 1: Yahoo Finance v7 Quote via AllOrigins (JSONP)
+              try {
+                  console.log('📡 Strategie 1: Yahoo Quote API via JSONP...');
+                  const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}`;
+                  const jsonpUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                  const res = await fetchJsonp(jsonpUrl);
+                  if (res && res.contents) {
+                      const parsed = JSON.parse(res.contents);
+                      if (parsed && parsed.quoteResponse && parsed.quoteResponse.result) {
+                          console.log('✅ Strategie 1 erfolgreich!');
+                          return parsed;
                       }
-                  } catch (e) {
-                      console.warn(`⚠️ Proxy #${i + 1} abgelehnt:`, e.message);
                   }
+              } catch (e) {
+                  console.warn('⚠️ Strategie 1 fehlgeschlagen:', e.message);
               }
-              throw new Error("Alle 4 CORS-Proxies haben die Anfrage abgelehnt.");
+
+              // Strategie 2: Alternative Yahoo v8 Chart API via JSONP
+              try {
+                  console.log('📡 Strategie 2: Yahoo Chart API via JSONP...');
+                  const results = [];
+                  for (const sym of symbols) {
+                      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d`;
+                      const jsonpUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                      const res = await fetchJsonp(jsonpUrl);
+                      if (res && res.contents) {
+                          const parsed = JSON.parse(res.contents);
+                          if (parsed && parsed.chart && parsed.chart.result && parsed.chart.result[0]) {
+                              const meta = parsed.chart.result[0].meta;
+                              results.push({
+                                  symbol: meta.symbol,
+                                  regularMarketPrice: meta.regularMarketPrice,
+                                  currency: meta.currency
+                              });
+                          }
+                      }
+                  }
+                  if (results.length > 0) {
+                      console.log('✅ Strategie 2 erfolgreich!');
+                      return { quoteResponse: { result: results } };
+                  }
+              } catch (e) {
+                  console.warn('⚠️ Strategie 2 fehlgeschlagen:', e.message);
+              }
+
+              // Strategie 3: CorsProxy.org Standard Fetch
+              try {
+                  console.log('📡 Strategie 3: CorsProxy.org Direct...');
+                  const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}&_=${Date.now()}`;
+                  const res = await fetch(`https://corsproxy.org/?${encodeURIComponent(targetUrl)}`);
+                  if (res.ok) {
+                      const parsed = await res.json();
+                      if (parsed && parsed.quoteResponse && parsed.quoteResponse.result) {
+                          console.log('✅ Strategie 3 erfolgreich!');
+                          return parsed;
+                      }
+                  }
+              } catch (e) {
+                  console.warn('⚠️ Strategie 3 fehlgeschlagen:', e.message);
+              }
+
+              throw new Error("Alle Schnittstellen konnten keine Daten liefern.");
           };
 
           try {
-              const symbolsStr = encodeURIComponent(tickersToFetch.join(','));
-              const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}`;
-              
-              const data = await fetchYahooDataWithFallback(targetUrl);
+              const data = await fetchYahooDataWithFallback(tickersToFetch);
               
               if (!data || !data.quoteResponse || !data.quoteResponse.result) {
                   throw new Error('Fehlerhafte oder leere Antwort von Yahoo Finance');
@@ -1641,17 +1691,15 @@
                   }
               });
 
+              // Währungsumrechnung (falls nötig, z. B. USD -> EUR)
               const exchangeRates = new Map();
               if (currenciesNeeded.size > 0) {
                   btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade FX-Kurse...';
                   lucide.createIcons();
                   
                   const fxTickers = Array.from(currenciesNeeded).map(c => `${c}EUR=X`);
-                  const fxSymbolsStr = encodeURIComponent(fxTickers.join(','));
-                  const fxTargetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${fxSymbolsStr}`;
-                  
                   try {
-                      const fxData = await fetchYahooDataWithFallback(fxTargetUrl);
+                      const fxData = await fetchYahooDataWithFallback(fxTickers);
                       if (fxData && fxData.quoteResponse && fxData.quoteResponse.result) {
                           fxData.quoteResponse.result.forEach(fxRes => {
                               const baseCurrency = fxRes.symbol.replace('EUR=X', '');
@@ -1663,6 +1711,7 @@
                   }
               }
 
+              // Werte im State aktualisieren
               state.depot.forEach(item => {
                   if (!item.ticker || item.ticker.trim() === '') return;
                   
@@ -1721,6 +1770,7 @@
           
           lucide.createIcons();
       }
+    
       function updateDepotTimestamp() {
           const el = document.getElementById('depot-last-update');
           if(el) {
