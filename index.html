@@ -101,16 +101,16 @@
               </h3>
               <button onclick="closeSellModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
           </div>
-          <p class="text-xs text-slate-500">Möchtest du die Position <strong id="sell-asset-name" class="text-slate-800"></strong> wirklich verkaufen? Sie wird anschließend in die Wertpapierhistorie verschoben.</p>
+          <p class="text-xs text-slate-500">Möchtest du Anteile der Position <strong id="sell-asset-name" class="text-slate-800"></strong> verkaufen? Veraufte Anteile werden in die Wertpapierhistorie überführt. Restbestände verbleiben im Depot. <br>(Aktueller Bestand: <strong id="sell-max-info" class="text-indigo-600">0</strong>)</p>
           
           <div class="space-y-3 pt-2">
               <div class="grid grid-cols-2 gap-3">
                   <div>
-                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Anzahl Aktien</label>
-                      <input type="number" id="sell-anzahl" step="0.0001" oninput="calculateSellPreview()" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
+                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Anzahl Aktien (Verkauf)</label>
+                      <input type="number" id="sell-anzahl" step="0.0001" min="0.0001" oninput="calculateSellPreview()" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
                   </div>
                   <div>
-                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Kaufpreis (€)</label>
+                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Kaufpreis (€ / Stück)</label>
                       <input type="text" id="sell-kaufpreis" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); calculateSellPreview();" class="w-full px-3 py-1.5 text-right border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
                   </div>
               </div>
@@ -330,14 +330,14 @@
                           <canvas id="chartAssetAllocation"></canvas>
                       </div>
                   </div>
-                  <!-- NEU: Zusammenfassendes Vergleichsdiagramm der Depots aller Personen -->
+                  <!-- Zusammenfassendes Vergleichsdiagramm der Depots aller Personen -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
                       <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depotwert nach Personen (Vergleich)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
                           <canvas id="chartDepotOwnerComparison"></canvas>
                       </div>
                   </div>
-                  <!-- NEU: Realisierte Performance / Verkäufe über Laufzeit -->
+                  <!-- Realisierte Performance / Verkäufe über Laufzeit -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
                       <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Gewinn / Verlust (Laufzeit)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
@@ -711,10 +711,7 @@
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('depot', 'name')">Bezeichnung</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'isinWkn')">ISIN / WKN</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'bank')">Bank / Broker</th>
-                                  <!-- BEREINIGTE TICKER SPALTE -->
-                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'ticker')">
-                                      Ticker *
-                                  </th>
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'ticker')">Ticker *</th>
                                   <th class="pb-3 font-medium w-28">Zuordnung</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'anzahl')">Stückzahl</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'kaufpreis')">Kaufkurs</th>
@@ -764,7 +761,7 @@
               </div>
           </div>
 
-          <!-- TAB: WERTPAPIERHISTORIE (NEU) -->
+          <!-- TAB: WERTPAPIERHISTORIE -->
           <div id="tab-depotHistory" class="hidden space-y-8">
               <div>
                   <h2 class="text-2xl font-bold tracking-tight">Wertpapierhistorie (Realisierte Verkäufe)</h2>
@@ -1096,7 +1093,7 @@
               </div>
           </div>
 
-          <!-- TAB: KONTOTRACKER (NEU - TAGESGELDHOPPING) -->
+          <!-- TAB: KONTOTRACKER -->
           <div id="tab-accountTracker" class="hidden space-y-8">
               <div>
                   <h2 class="text-2xl font-bold tracking-tight">Kontotracker (Tagesgeldhopping)</h2>
@@ -1262,7 +1259,7 @@
                   {field: 'name', type: 'text'},
                   {field: 'isinWkn', type: 'text', classes: 'w-28 uppercase'},
                   {field: 'bank', type: 'text', classes: 'w-24'},
-                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase'}, // Schlichtes Ticker-Design ohne Gelb
+                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase'},
                   {field: 'owner', type: 'select-owner', classes: 'w-28'},
                   {field: 'anzahl', type: 'number', step: '0.0001', classes: 'w-24'},
                   {field: 'kaufpreis', type: 'currency', classes: 'w-28'},
@@ -1438,7 +1435,6 @@
       function updateTaxSetting() { state.settings.applyCapitalGainsTax = document.getElementById('set-tax-cg').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       function toggleImmoEK() { state.settings.includeImmoInEK = document.getElementById('immo-ek-toggle').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       
-      // ERWEITERTE OWNER OPTIONS: Ehemann, Ehefrau, Kind 1, Kind 2
       function getOwnerOptionsHtml(currentVal) {
           const names = state.settings.names;
           return `
@@ -1770,7 +1766,13 @@
           if (!asset) return;
 
           document.getElementById('sell-asset-name').innerText = asset.name || "Wertpapier";
-          document.getElementById('sell-anzahl').value = asset.anzahl || 1;
+          const maxAnzahl = asset.anzahl || 1;
+          
+          const anzahlInput = document.getElementById('sell-anzahl');
+          anzahlInput.value = maxAnzahl;
+          anzahlInput.max = maxAnzahl;
+          
+          document.getElementById('sell-max-info').innerText = maxAnzahl;
           document.getElementById('sell-kaufpreis').value = formatEuroDisplay(asset.kaufpreis || 0);
           document.getElementById('sell-verkaufskurs').value = formatEuroDisplay(asset.aktuellerPreis || asset.kaufpreis || 0);
           document.getElementById('sell-gebuehren').value = "0,00";
@@ -1814,14 +1816,27 @@
           const asset = state.depot[activeSellingAssetIndex];
           if (!asset) return;
 
-          const anzahl = parseFloat(document.getElementById('sell-anzahl').value) || 0;
+          const verfuegbarAnzahl = parseFloat(asset.anzahl) || 0;
+          const verkaufAnzahl = parseFloat(document.getElementById('sell-anzahl').value) || 0;
+
+          // VALIDIERUNG: Maximale Menge und Gültigkeit prüfen
+          if (verkaufAnzahl <= 0) {
+              alert("Bitte gib eine gültige Verkaufsmenge ein (größer als 0).");
+              return;
+          }
+
+          if (verkaufAnzahl > verfuegbarAnzahl) {
+              alert(`Du kannst maximal nur ${verfuegbarAnzahl} Anteile verkaufen!`);
+              return;
+          }
+
           const kaufpreis = parseEuroInput(document.getElementById('sell-kaufpreis').value);
           const verkaufskurs = parseEuroInput(document.getElementById('sell-verkaufskurs').value);
           const gebuehren = parseEuroInput(document.getElementById('sell-gebuehren').value);
           const withTax = document.getElementById('sell-tax-checkbox').checked;
 
           const netGain = calculateSellPreview();
-          const bruttoGainTotal = anzahl * (verkaufskurs - kaufpreis);
+          const bruttoGainTotal = verkaufAnzahl * (verkaufskurs - kaufpreis);
           const taxPaid = withTax && bruttoGainTotal > 0 ? (bruttoGainTotal * 0.26375) : 0;
 
           const historyEntry = {
@@ -1833,7 +1848,7 @@
               bank: asset.bank || "",
               ticker: asset.ticker || "",
               owner: asset.owner || "both",
-              anzahl: anzahl,
+              anzahl: verkaufAnzahl,
               kaufpreis: kaufpreis,
               verkaufskurs: verkaufskurs,
               gebuehren: gebuehren,
@@ -1841,15 +1856,25 @@
               netGain: netGain
           };
 
+          // HISTORIE-EINTRAG ERSTELLEN
           state.depotHistory.push(historyEntry);
-          state.depot.splice(activeSellingAssetIndex, 1);
+
+          // BESTANDSIMPLEMENTIERUNG & TEILVERKAUF
+          if (verkaufAnzahl === verfuegbarAnzahl) {
+              // Vollständiger Verkauf -> Position löschen
+              state.depot.splice(activeSellingAssetIndex, 1);
+          } else {
+              // Teilverkauf -> Restmenge & Gesamtwert im Depot aktualisieren
+              asset.anzahl = verfuegbarAnzahl - verkaufAnzahl;
+              asset.value = asset.anzahl * (asset.aktuellerPreis || 0);
+          }
 
           saveToLocalStorage();
           closeSellModal();
           renderGenericTable('depot');
           renderDepotHistoryTable();
           updateCalculationsAndCharts();
-          alert("Position wurde erfolgreich verkauft und in die Wertpapierhistorie verschoben.");
+          alert("Verkauf wurde erfolgreich verbucht.");
       }
 
       function renderDepotHistoryTable() {
@@ -1942,7 +1967,6 @@
               const tr = document.createElement('tr');
               tr.className = 'border-b border-slate-100 text-xs hover:bg-slate-50 transition-colors';
 
-              // Datum 'Wieder Neukunde ab' berechnen
               let newCustomerDateStr = "-";
               let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Aktiv</span>';
 
@@ -2254,7 +2278,6 @@
           } 
           updateCategorySum('sum-ast-depot', a_dpH, a_dpW, a_dpB); astH += a_dpH; astW += a_dpW; astB += a_dpB;
 
-          // WERTPAPIERE DER KINDER FLIESSEN IN DIE VERMÖGENSBERECHUNG EIN
           const totalAssets = astH + astW + astB + astC1 + astC2;
           let liaH = 0, liaW = 0, liaB = 0; if(state.liabilities) { state.liabilities.forEach(l => { if(l.owner === 'husband') liaH += l.value; else if(l.owner === 'wife') liaW += l.value; else liaB += l.value; }); } updateCategorySum('sum-lia', liaH, liaW, liaB);
 
@@ -2383,7 +2406,6 @@
           const tg = state.assets.tagesgeld ? state.assets.tagesgeld.reduce((s,i)=>s+i.value,0) : 0; const fg = state.assets.festgeld ? state.assets.festgeld.reduce((s,i)=>s+i.value,0) : 0; const dp = state.depot.reduce((s,i)=>s+i.value,0); const re = state.assets.realestate ? state.assets.realestate.reduce((s,i)=>s+i.value,0) : 0;
           if(charts.assets) { charts.assets.data.datasets[0].data = [tg, fg, dp, re]; charts.assets.update(); } else { charts.assets = new Chart(ctxAsset, { type: 'pie', data: { labels: ['Tagesgeld', 'Festgeld', 'Depot', 'Immobilien'], datasets: [{ data: [tg, fg, dp, re], backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f59e0b'], borderWidth: 0 }] }, options: standardChartOptions }); }
           
-          // NEU: ZUSAMMENFASSENDES VERGLEICHSDIAGRAMM FÜR DEPOTS DER 4 PERSONEN + GEMEINSAM
           let depH = 0, depW = 0, depC1 = 0, depC2 = 0, depB = 0;
           state.depot.forEach(i => {
               if (i.owner === 'husband') depH += i.value;
@@ -2422,7 +2444,6 @@
               });
           }
 
-          // NEU: DIAGRAMM FÜR REALISIERTE GEWINNE / VERLUSTE
           let totalRealized = 0;
           state.depotHistory.forEach(h => totalRealized += h.netGain);
 
