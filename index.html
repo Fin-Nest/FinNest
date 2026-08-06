@@ -624,7 +624,7 @@
                       </div>
                       <div class="flex gap-2 flex-wrap">
                           <button onclick="updateDepotPrices()" id="btn-update-prices" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm">
-                              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren
+                              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren (Twelve Data)
                           </button>
                           <button onclick="exportDepotCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all">
                               <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
@@ -1016,6 +1016,23 @@
                   </div>
               </div>
 
+              <!-- NEUE KARTE: TWELVE DATA API SCHNITTSTELLE -->
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl space-y-4 avoid-break mt-8">
+                  <div class="flex justify-between items-center">
+                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="key" class="text-blue-600"></i> Twelve Data Live-Kurse API-Key</h3>
+                      <a href="https://twelvedata.com" target="_blank" class="text-xs text-indigo-600 hover:underline font-medium">Kostenlos Key holen &rarr;</a>
+                  </div>
+                  <p class="text-xs text-slate-500">Für die automatische Aktualisierung der Wertpapierkurse benötigst du einen kostenlosen API-Key von Twelve Data. Gib deinen Key hier ein, um Live-Marktdaten zu laden.</p>
+                  
+                  <div class="space-y-3 pt-2">
+                      <div>
+                          <label class="block text-xs font-medium text-slate-500 mb-1">Twelve Data API-Key</label>
+                          <input type="text" id="set-twelvedata-key" oninput="handleApiKeyChange()" placeholder="z. B. 8a9b7c6d5e4f3a2b..." class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-mono text-sm">
+                      </div>
+                      <p class="text-[11px] text-slate-400"><strong>Tipp für Ticker-Eingaben:</strong> US-Aktien direkt eintragen (z. B. <code>AAPL</code>, <code>MSFT</code>). Deutsche Werte mit Börsenplatz-Endung eintragen (z. B. <code>BMW.DEX</code> für Xetra oder <code>BMW</code>).</p>
+                  </div>
+              </div>
+
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl space-y-4 avoid-break mt-8">
                   <div class="flex justify-between items-center">
                       <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-600"></i> Lokale Verschlüsselung (AES-256)</h3>
@@ -1108,7 +1125,7 @@
       };
 
       let state = {
-          settings: { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, sort: {} },
+          settings: { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", sort: {} },
           income: { husbandAnnual: 0, wifeAnnual: 0, kindergeldAnnual: 0, elterngeldHusbandAnnual: 0, elterngeldWifeAnnual: 0, otherAnnual: 0 },
           capitalGains: [], expenses: { rent: 0, rentOwner: "both", household: 0, householdOwner: "both" },
           investments: [], insurances: [], carExpenses: [], leisureExpenses: [],
@@ -1186,9 +1203,10 @@
       function parseAndLoadState(jsonStr) {
           if (jsonStr) { try { state = JSON.parse(jsonStr); } catch(e) { console.error("JSON Parsing Error", e); } }
           
-          if (!state.settings) state.settings = { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, sort: {} };
+          if (!state.settings) state.settings = { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", sort: {} };
           if (typeof state.settings.applyCapitalGainsTax === 'undefined') state.settings.applyCapitalGainsTax = false;
           if (typeof state.settings.includeImmoInEK === 'undefined') state.settings.includeImmoInEK = false;
+          if (typeof state.settings.twelveDataApiKey === 'undefined') state.settings.twelveDataApiKey = "";
           if (!state.settings.sort) state.settings.sort = {};
           if (!state.liabilities) state.liabilities = [];
           if (!state.salaryHistory) state.salaryHistory = { husband: [], wife: [] };
@@ -1267,6 +1285,11 @@
           saveToLocalStorage(); applyDynamicNames(); syncOwnerDropdowns(); updateCalculationsAndCharts(); renderSalaryChart();
       }
 
+      function handleApiKeyChange() {
+          state.settings.twelveDataApiKey = document.getElementById('set-twelvedata-key').value.trim();
+          saveToLocalStorage();
+      }
+
       function updateTaxSetting() { state.settings.applyCapitalGainsTax = document.getElementById('set-tax-cg').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       function toggleImmoEK() { state.settings.includeImmoInEK = document.getElementById('immo-ek-toggle').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       
@@ -1306,6 +1329,7 @@
           document.getElementById('set-name-child1').value = names.child1; document.getElementById('set-name-child2').value = names.child2;
           document.getElementById('set-tax-cg').checked = state.settings.applyCapitalGainsTax;
           if(document.getElementById('immo-ek-toggle')) document.getElementById('immo-ek-toggle').checked = state.settings.includeImmoInEK;
+          if(document.getElementById('set-twelvedata-key')) document.getElementById('set-twelvedata-key').value = state.settings.twelveDataApiKey || "";
 
           document.getElementById('inc-husband-annual').value = formatEuroDisplay(state.income.husbandAnnual); document.getElementById('inc-wife-annual').value = formatEuroDisplay(state.income.wifeAnnual);
           document.getElementById('inc-kindergeld').value = formatEuroDisplay(state.income.kindergeldAnnual);
@@ -1546,19 +1570,24 @@
           saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
       }
 
-     // --- ROBUSTER KOSTENLOSER YAHOO-FINANCE FETCH (JSONP & Multi-Proxy) ---
+      // --- AKTUELLE KURSABFRAGE ÜBER DIE TWELVE DATA API ---
       async function updateDepotPrices() {
           const btn = document.getElementById('btn-update-prices');
           const originalHtml = btn.innerHTML;
-          
+          const apiKey = state.settings ? state.settings.twelveDataApiKey : "";
+
+          if (!apiKey || apiKey.trim() === '') {
+              alert("Bitte trage zuerst deinen Twelve Data API-Key im Reiter 'Personalisierung' ein.");
+              switchTab('settings');
+              return;
+          }
+
           btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade Kurse...';
           lucide.createIcons();
-          
-          let failedItems = [];
-          let successCount = 0;
-          let totalCount = 0;
 
           const tickersToFetch = [];
+          let totalCount = 0;
+
           state.depot.forEach(item => {
               if (item.ticker && item.ticker.trim() !== '') {
                   totalCount++;
@@ -1572,194 +1601,97 @@
               return;
           }
 
-          // Hilfsfunktion: Lädt Daten via JSONP (umgeht CORS-Policy auf GitHub Pages komplett)
-          const fetchJsonp = (url) => {
-              return new Promise((resolve, reject) => {
-                  const callbackName = 'yahoo_cb_' + Math.random().toString(36).substring(2, 10);
-                  const script = document.createElement('script');
-                  
-                  const timeout = setTimeout(() => {
-                      delete window[callbackName];
-                      if (script.parentNode) script.parentNode.removeChild(script);
-                      reject(new Error('JSONP Timeout'));
-                  }, 6000);
-
-                  window[callbackName] = (data) => {
-                      clearTimeout(timeout);
-                      delete window[callbackName];
-                      if (script.parentNode) script.parentNode.removeChild(script);
-                      resolve(data);
-                  };
-
-                  const separator = url.includes('?') ? '&' : '?';
-                  script.src = `${url}${separator}callback=${callbackName}&_=${Date.now()}`;
-                  script.onerror = () => {
-                      clearTimeout(timeout);
-                      delete window[callbackName];
-                      if (script.parentNode) script.parentNode.removeChild(script);
-                      reject(new Error('Script Load Error'));
-                  };
-
-                  document.body.appendChild(script);
-              });
-          };
-
-          // Haupt-Fetch-Strategie mit Fallbacks
-          const fetchYahooDataWithFallback = async (symbols) => {
-              const symbolsStr = encodeURIComponent(symbols.join(','));
+          try {
+              // 1. Kursabruf im Batch-Verfahren
+              const symbolsParam = encodeURIComponent(tickersToFetch.join(','));
+              const priceUrl = `https://api.twelvedata.com/price?symbol=${symbolsParam}&apikey=${apiKey.trim()}`;
               
-              // Strategie 1: Yahoo Finance v7 Quote via AllOrigins (JSONP)
-              try {
-                  console.log('📡 Strategie 1: Yahoo Quote API via JSONP...');
-                  const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}`;
-                  const jsonpUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                  const res = await fetchJsonp(jsonpUrl);
-                  if (res && res.contents) {
-                      const parsed = JSON.parse(res.contents);
-                      if (parsed && parsed.quoteResponse && parsed.quoteResponse.result) {
-                          console.log('✅ Strategie 1 erfolgreich!');
-                          return parsed;
-                      }
+              const res = await fetch(priceUrl);
+              if (!res.ok) throw new Error(`HTTP Fehler ${res.status}`);
+              const priceResponse = await res.json();
+
+              // In Twelve Data: Bei Einzelabfrage kommt { price: "123.4" }, bei Batch { "AAPL": { price: "123.4" }, ... }
+              let rawPrices = {};
+              if (tickersToFetch.length === 1) {
+                  const singleTicker = tickersToFetch[0];
+                  if (priceResponse.price) {
+                      rawPrices[singleTicker] = priceResponse;
+                  } else {
+                      rawPrices[singleTicker] = priceResponse; // Kann auch Fehlermeldung enthalten
                   }
-              } catch (e) {
-                  console.warn('⚠️ Strategie 1 fehlgeschlagen:', e.message);
+              } else {
+                  rawPrices = priceResponse;
               }
 
-              // Strategie 2: Alternative Yahoo v8 Chart API via JSONP
-              try {
-                  console.log('📡 Strategie 2: Yahoo Chart API via JSONP...');
-                  const results = [];
-                  for (const sym of symbols) {
-                      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d`;
-                      const jsonpUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                      const res = await fetchJsonp(jsonpUrl);
-                      if (res && res.contents) {
-                          const parsed = JSON.parse(res.contents);
-                          if (parsed && parsed.chart && parsed.chart.result && parsed.chart.result[0]) {
-                              const meta = parsed.chart.result[0].meta;
-                              results.push({
-                                  symbol: meta.symbol,
-                                  regularMarketPrice: meta.regularMarketPrice,
-                                  currency: meta.currency
-                              });
+              // 2. Erfassen benötigter FX-Wechselkurse (falls US-Aktien ohne EUR Kurs geliefert werden)
+              // Twelve Data Preise sind meist in Handelswährung. USD -> EUR Wechselkurs ermitteln:
+              let usdToEurRate = 1.0;
+              const hasUsTickers = tickersToFetch.some(t => !t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE'));
+
+              if (hasUsTickers) {
+                  try {
+                      const fxRes = await fetch(`https://api.twelvedata.com/price?symbol=USD/EUR&apikey=${apiKey.trim()}`);
+                      if (fxRes.ok) {
+                          const fxData = await fxRes.json();
+                          if (fxData && fxData.price) {
+                              usdToEurRate = parseFloat(fxData.price) || 1.0;
                           }
                       }
-                  }
-                  if (results.length > 0) {
-                      console.log('✅ Strategie 2 erfolgreich!');
-                      return { quoteResponse: { result: results } };
-                  }
-              } catch (e) {
-                  console.warn('⚠️ Strategie 2 fehlgeschlagen:', e.message);
-              }
-
-              // Strategie 3: CorsProxy.org Standard Fetch
-              try {
-                  console.log('📡 Strategie 3: CorsProxy.org Direct...');
-                  const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}&_=${Date.now()}`;
-                  const res = await fetch(`https://corsproxy.org/?${encodeURIComponent(targetUrl)}`);
-                  if (res.ok) {
-                      const parsed = await res.json();
-                      if (parsed && parsed.quoteResponse && parsed.quoteResponse.result) {
-                          console.log('✅ Strategie 3 erfolgreich!');
-                          return parsed;
-                      }
-                  }
-              } catch (e) {
-                  console.warn('⚠️ Strategie 3 fehlgeschlagen:', e.message);
-              }
-
-              throw new Error("Alle Schnittstellen konnten keine Daten liefern.");
-          };
-
-          try {
-              const data = await fetchYahooDataWithFallback(tickersToFetch);
-              
-              if (!data || !data.quoteResponse || !data.quoteResponse.result) {
-                  throw new Error('Fehlerhafte oder leere Antwort von Yahoo Finance');
-              }
-
-              const results = data.quoteResponse.result;
-              const fetchedDataMap = new Map();
-              const currenciesNeeded = new Set();
-
-              results.forEach(res => {
-                  const sym = res.symbol.toUpperCase();
-                  fetchedDataMap.set(sym, res);
-                  if (res.currency && res.currency !== 'EUR') {
-                      currenciesNeeded.add(res.currency);
-                  }
-              });
-
-              // Währungsumrechnung (falls nötig, z. B. USD -> EUR)
-              const exchangeRates = new Map();
-              if (currenciesNeeded.size > 0) {
-                  btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade FX-Kurse...';
-                  lucide.createIcons();
-                  
-                  const fxTickers = Array.from(currenciesNeeded).map(c => `${c}EUR=X`);
-                  try {
-                      const fxData = await fetchYahooDataWithFallback(fxTickers);
-                      if (fxData && fxData.quoteResponse && fxData.quoteResponse.result) {
-                          fxData.quoteResponse.result.forEach(fxRes => {
-                              const baseCurrency = fxRes.symbol.replace('EUR=X', '');
-                              exchangeRates.set(baseCurrency, fxRes.regularMarketPrice);
-                          });
-                      }
-                  } catch (fxError) {
-                      console.warn("Währungsabruf fehlgeschlagen.", fxError);
+                  } catch (fxErr) {
+                      console.warn("FX-Kurs konnte nicht geladen werden, verwende 1.0", fxErr);
                   }
               }
 
-              // Werte im State aktualisieren
+              let successCount = 0;
+              let failedItems = [];
+
+              // 3. Kurse verarbeiten und State aktualisieren
               state.depot.forEach(item => {
                   if (!item.ticker || item.ticker.trim() === '') return;
-                  
                   const t = item.ticker.trim().toUpperCase();
-                  const res = fetchedDataMap.get(t);
-                  
-                  if (res && typeof res.regularMarketPrice === 'number') {
-                      let priceInEur = res.regularMarketPrice;
+                  const symbolData = rawPrices[t];
+
+                  if (symbolData && symbolData.price) {
+                      let parsedPrice = parseFloat(symbolData.price);
                       
-                      if (res.currency && res.currency !== 'EUR') {
-                          const rate = exchangeRates.get(res.currency);
-                          if (rate) priceInEur = priceInEur * rate;
-                          else { failedItems.push(item); return; }
+                      // Kursumrechnung bei US-Titeln ohne deutsche Handelsplatz-Kennzeichnung
+                      if (!t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE')) {
+                          parsedPrice = parsedPrice * usdToEurRate;
                       }
-                      
-                      item.aktuellerPreis = priceInEur;
-                      item.value = item.anzahl * priceInEur;
+
+                      item.aktuellerPreis = parsedPrice;
+                      item.value = (item.anzahl || 0) * parsedPrice;
                       successCount++;
                   } else {
                       failedItems.push(item);
                   }
               });
 
-          } catch (error) {
-              console.error("API Komplettausfall:", error);
-              state.depot.forEach(item => {
-                  if (item.ticker && item.ticker.trim() !== '') failedItems.push(item);
-              });
-          }
+              state.depotLastUpdate = new Date().toISOString();
+              saveToLocalStorage();
+              renderGenericTable('depot');
+              updateCalculationsAndCharts();
+              updateDepotTimestamp();
 
-          state.depotLastUpdate = new Date().toISOString();
-          saveToLocalStorage();
-          renderGenericTable('depot');
-          updateCalculationsAndCharts();
-          updateDepotTimestamp();
+              if (successCount === totalCount) {
+                  btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Erfolgreich (${successCount}/${totalCount})`;
+                  btn.classList.replace('text-blue-700', 'text-emerald-700');
+                  btn.classList.replace('bg-blue-100', 'bg-emerald-100');
+              } else if (successCount > 0) {
+                  btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Teilweise (${successCount}/${totalCount})`;
+                  btn.classList.replace('text-blue-700', 'text-amber-700');
+                  btn.classList.replace('bg-blue-100', 'bg-amber-100');
+              } else {
+                  btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehlgeschlagen`;
+                  btn.classList.replace('text-blue-700', 'text-rose-700');
+                  btn.classList.replace('bg-blue-100', 'bg-rose-100');
+              }
 
-          if (failedItems.length > 0 && successCount === 0) {
-              btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehlgeschlagen`;
+          } catch (err) {
+              console.error("Twelve Data API Fehler:", err);
+              btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehler beim Abruf`;
               btn.classList.replace('text-blue-700', 'text-rose-700');
               btn.classList.replace('bg-blue-100', 'bg-rose-100');
-          } else if (failedItems.length > 0) {
-              btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Teilweise (${successCount}/${totalCount})`;
-              btn.classList.replace('text-blue-700', 'text-amber-700');
-              btn.classList.replace('bg-blue-100', 'bg-amber-100');
-          } else {
-              btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Erfolgreich (${successCount}/${totalCount})`;
-              btn.classList.replace('text-blue-700', 'text-emerald-700');
-              btn.classList.replace('bg-blue-100', 'bg-emerald-100');
           }
 
           setTimeout(() => {
@@ -1767,10 +1699,8 @@
               btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm";
               lucide.createIcons();
           }, 4000);
-          
-          lucide.createIcons();
       }
-    
+
       function updateDepotTimestamp() {
           const el = document.getElementById('depot-last-update');
           if(el) {
