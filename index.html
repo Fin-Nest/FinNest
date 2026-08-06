@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="FamFinanz Pro">
   <meta name="theme-color" content="#4f46e5">
 
- <!-- Dynamisches Web-App Manifest -->
+  <!-- Dynamisches Web-App Manifest -->
   <link rel="manifest" href='data:application/manifest+json,{"name":"FamFinanz Pro","short_name":"FamFinanz","start_url":".","display":"standalone","background_color":"%23f8fafc","theme_color":"%234f46e5"}'>
   
   <!-- External CDN Dependencies -->
@@ -92,6 +92,61 @@
       </div>
   </div>
 
+  <!-- VERKAUFS-MODAL -->
+  <div id="sell-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <i data-lucide="badge-dollar-sign" class="text-emerald-600"></i> Wertpapier verkaufen
+              </h3>
+              <button onclick="closeSellModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <p class="text-xs text-slate-500">Möchtest du die Position <strong id="sell-asset-name" class="text-slate-800"></strong> wirklich verkaufen? Sie wird anschließend in die Wertpapierhistorie verschoben.</p>
+          
+          <div class="space-y-3 pt-2">
+              <div class="grid grid-cols-2 gap-3">
+                  <div>
+                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Anzahl Aktien</label>
+                      <input type="number" id="sell-anzahl" step="0.0001" oninput="calculateSellPreview()" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
+                  </div>
+                  <div>
+                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Kaufpreis (€)</label>
+                      <input type="text" id="sell-kaufpreis" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); calculateSellPreview();" class="w-full px-3 py-1.5 text-right border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
+                  </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                  <div>
+                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Verkaufskurs (€)</label>
+                      <input type="text" id="sell-verkaufskurs" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); calculateSellPreview();" class="w-full px-3 py-1.5 text-right border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
+                  </div>
+                  <div>
+                      <label class="block text-[11px] font-semibold text-slate-500 mb-1">Verkaufsgebühren (€)</label>
+                      <input type="text" id="sell-gebuehren" value="0,00" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); calculateSellPreview();" class="w-full px-3 py-1.5 text-right border border-slate-200 rounded-xl text-sm font-semibold focus:outline-indigo-600">
+                  </div>
+              </div>
+              
+              <div class="pt-1">
+                  <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <input type="checkbox" id="sell-tax-checkbox" onchange="calculateSellPreview()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600">
+                      Abgeltungssteuer (26,375%) abziehen
+                  </label>
+              </div>
+
+              <div class="bg-indigo-50/50 p-3.5 rounded-xl border border-indigo-100 space-y-1">
+                  <div class="flex justify-between text-xs text-slate-600">
+                      <span>Errechneter Ertrag (Netto):</span>
+                      <strong id="sell-preview-result" class="text-sm font-extrabold text-indigo-700">0,00 €</strong>
+                  </div>
+              </div>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+              <button onclick="closeSellModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-all">Abbrechen</button>
+              <button onclick="confirmSellAsset()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-sm transition-all">Verkauf bestätigen</button>
+          </div>
+      </div>
+  </div>
+
   <!-- MAIN APP WRAPPER -->
   <div id="app-wrapper" class="hidden flex-1 flex flex-col md:flex-row h-full overflow-hidden relative">
       
@@ -134,6 +189,9 @@
                   <button onclick="switchTab('assets')" id="nav-assets" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
                       <i data-lucide="line-chart" class="w-4 h-4"></i> Vermögen & Schulden
                   </button>
+                  <button onclick="switchTab('depotHistory')" id="nav-depotHistory" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="history" class="w-4 h-4"></i> Wertpapierhistorie
+                  </button>
                   <button onclick="switchTab('salary')" id="nav-salary" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
                       <i data-lucide="trending-up" class="w-4 h-4"></i> Gehaltsentwicklung
                   </button>
@@ -142,6 +200,9 @@
                   </button>
                   <button onclick="switchTab('children')" id="nav-children" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
                       <i data-lucide="baby" class="w-4 h-4"></i> <span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span>
+                  </button>
+                  <button onclick="switchTab('accountTracker')" id="nav-accountTracker" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
+                      <i data-lucide="landmark" class="w-4 h-4"></i> Kontotracker
                   </button>
                   <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-50">
                       <i data-lucide="user-cog" class="w-4 h-4"></i> Personalisierung
@@ -269,10 +330,18 @@
                           <canvas id="chartAssetAllocation"></canvas>
                       </div>
                   </div>
+                  <!-- NEU: Zusammenfassendes Vergleichsdiagramm der Depots aller Personen -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depot-Aufteilung (Einzelwerte)</h3>
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depotwert nach Personen (Vergleich)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartDepotAllocation"></canvas>
+                          <canvas id="chartDepotOwnerComparison"></canvas>
+                      </div>
+                  </div>
+                  <!-- NEU: Realisierte Performance / Verkäufe über Laufzeit -->
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Gewinn / Verlust (Laufzeit)</h3>
+                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                          <canvas id="chartRealizedGains"></canvas>
                       </div>
                   </div>
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
@@ -281,7 +350,7 @@
                           <canvas id="chartChildren"></canvas>
                       </div>
                   </div>
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break lg:col-span-2">
                       <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Historische Gehaltsentwicklung (Brutto)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
                           <canvas id="chartSalaryHistory"></canvas>
@@ -635,23 +704,23 @@
                       </div>
                   </div>
                   <div class="overflow-x-auto">
-                      <table class="w-full text-left border-collapse min-w-[900px]">
+                      <table class="w-full text-left border-collapse min-w-[950px]">
                           <thead>
                               <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'type')">Typ</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('depot', 'name')">Bezeichnung</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'isinWkn')">ISIN / WKN</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'bank')">Bank / Broker</th>
-                                  <!-- HERVORHEBUNG TICKER SPALTE -->
-                                  <th class="pb-3 font-medium cursor-pointer hover:text-amber-700 transition-colors w-28 text-amber-800 bg-amber-50/80 px-2 py-1 rounded-t border-t border-x border-amber-200 shadow-2xs" onclick="sortTable('depot', 'ticker')">
+                                  <!-- BEREINIGTE TICKER SPALTE -->
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'ticker')">
                                       Ticker *
                                   </th>
-                                  <th class="pb-3 font-medium w-24">Zuordnung</th>
+                                  <th class="pb-3 font-medium w-28">Zuordnung</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'anzahl')">Stückzahl</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'kaufpreis')">Kaufkurs</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'aktuellerPreis')">Akt. Kurs</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-36" onclick="sortTable('depot', 'value')">Gesamtwert & Perf.</th>
-                                  <th class="pb-3 text-right w-10">Aktion</th>
+                                  <th class="pb-3 text-right w-16">Aktionen</th>
                               </tr>
                           </thead>
                           <tbody id="depot-table-body"></tbody>
@@ -691,6 +760,42 @@
                       <div class="lg:col-span-8 p-6 h-80 relative projection-chart w-full">
                           <canvas id="chartWealthProjection"></canvas>
                       </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: WERTPAPIERHISTORIE (NEU) -->
+          <div id="tab-depotHistory" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Wertpapierhistorie (Realisierte Verkäufe)</h2>
+                  <p class="text-slate-500">Übersicht aller veräußerten Aktien & ETFs mit detaillierter Ertrags- und Steueraufschlüsselung.</p>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div class="flex justify-between items-center">
+                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                          <i data-lucide="history" class="text-indigo-600"></i> Historische Verkäufe
+                      </h3>
+                      <span id="sum-realized-gains-badge" class="px-3 py-1 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl">Gesamtertrag: 0,00 €</span>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[900px]">
+                          <thead>
+                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium">Verkaufsdatum</th>
+                                  <th class="pb-3 font-medium">Bezeichnung & ISIN</th>
+                                  <th class="pb-3 font-medium">Zuordnung</th>
+                                  <th class="pb-3 font-medium text-right">Stückzahl</th>
+                                  <th class="pb-3 font-medium text-right">Kaufkurs</th>
+                                  <th class="pb-3 font-medium text-right">Verkaufskurs</th>
+                                  <th class="pb-3 font-medium text-right">Gebühren</th>
+                                  <th class="pb-3 font-medium text-right">Steuer (26.375%)</th>
+                                  <th class="pb-3 font-medium text-right">Gewinn / Verlust (Netto)</th>
+                                  <th class="pb-3 text-right">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="depot-history-table-body"></tbody>
+                      </table>
                   </div>
               </div>
           </div>
@@ -991,7 +1096,43 @@
               </div>
           </div>
 
-          <!-- TAB FÜR PERSONALISIERUNG -->
+          <!-- TAB: KONTOTRACKER (NEU - TAGESGELDHOPPING) -->
+          <div id="tab-accountTracker" class="hidden space-y-8">
+              <div>
+                  <h2 class="text-2xl font-bold tracking-tight">Kontotracker (Tagesgeldhopping)</h2>
+                  <p class="text-slate-500">Übersicht über Kontoeinstellungen, Kündigungsfristen und automatische Neukunden-Statusberechnung.</p>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div class="flex justify-between items-center">
+                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                          <i data-lucide="landmark" class="text-indigo-600"></i> Tagesgeld- & Festgeldkonten Verwalten
+                      </h3>
+                      <button onclick="addTrackedAccount()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Konto hinzufügen
+                      </button>
+                  </div>
+                  <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse min-w-[850px]">
+                          <thead>
+                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                                  <th class="pb-3 font-medium">Bankinstitut</th>
+                                  <th class="pb-3 font-medium">Zuordnung</th>
+                                  <th class="pb-3 font-medium">Eröffnungsdatum</th>
+                                  <th class="pb-3 font-medium">Kündigungsdatum</th>
+                                  <th class="pb-3 font-medium w-28">Sperrfrist (Mo.)</th>
+                                  <th class="pb-3 font-medium">Wieder Neukunde ab</th>
+                                  <th class="pb-3 font-medium">Status</th>
+                                  <th class="pb-3 text-right">Aktion</th>
+                              </tr>
+                          </thead>
+                          <tbody id="account-tracker-table-body"></tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+
+          <!-- TAB: PERSONALISIERUNG -->
           <div id="tab-settings" class="hidden space-y-8">
               <div>
                   <h2 class="text-2xl font-bold tracking-tight">Profil- & App-Personalisierung</h2>
@@ -1067,6 +1208,7 @@
 
   <script>
       window.appPassword = null;
+      let activeSellingAssetIndex = null;
       
       Chart.register(ChartDataLabels);
       Chart.defaults.set('plugins.datalabels', {
@@ -1075,7 +1217,7 @@
           formatter: function(value) { return value > 0 ? formatEuroDisplay(value) + ' €' : ''; }
       });
 
-      // ERWEITERTE TABLE CONFIG: isinWkn integriert
+      // TABLE CONFIGURATIONS
       const TABLE_CONFIGS = {
           realestate: {
               path: ['assets', 'realestate'], tbodyId: 'realestate-table-body',
@@ -1118,10 +1260,10 @@
               cols: [
                   {field: 'type', type: 'datalist', listId: 'depot-types', classes: 'w-24'}, 
                   {field: 'name', type: 'text'},
-                  {field: 'isinWkn', type: 'text', classes: 'w-28 uppercase'}, // 1. WKN/ISIN Spalte direkt nach Name
+                  {field: 'isinWkn', type: 'text', classes: 'w-28 uppercase'},
                   {field: 'bank', type: 'text', classes: 'w-24'},
-                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase font-semibold bg-amber-50/50 border border-amber-200 focus:bg-white rounded'}, // 2. Optische Hervorhebung Ticker
-                  {field: 'owner', type: 'select-owner', classes: 'w-24'},
+                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase'}, // Schlichtes Ticker-Design ohne Gelb
+                  {field: 'owner', type: 'select-owner', classes: 'w-28'},
                   {field: 'anzahl', type: 'number', step: '0.0001', classes: 'w-24'},
                   {field: 'kaufpreis', type: 'currency', classes: 'w-28'},
                   {field: 'aktuellerPreis', type: 'currency', classes: 'w-28'},
@@ -1136,13 +1278,13 @@
           capitalGains: [], expenses: { rent: 0, rentOwner: "both", household: 0, householdOwner: "both" },
           investments: [], insurances: [], carExpenses: [], leisureExpenses: [],
           assets: { tagesgeld: [], festgeld: [], realestate: [] }, liabilities: [], 
-          depot: [], depotLastUpdate: null, childExpenses: [],
+          depot: [], depotHistory: [], accountTracker: [], depotLastUpdate: null, childExpenses: [],
           salaryHistory: { husband: [], wife: [] },
           immoPlanning: { sollzins: 3.69, tilgung: 1.4, sicherheitsreserve: 0, modus: 'laufzeit', volltilgung: false, wunschLaufzeit: 35, zinsbindung: 10, sondertilgungen: [], scenarios: [] },
           calculated: { mtlIncome: 0, mtlExpenses: 0 }
       };
 
-      let charts = { cashflow: null, assets: null, depot: null, children: null, interhyp: null, expenseStructure: null, wealthProjection: null, salaryHistory: null };
+      let charts = { cashflow: null, assets: null, depotOwnerComparison: null, realizedGains: null, children: null, interhyp: null, expenseStructure: null, wealthProjection: null, salaryHistory: null };
       let activeThSchedule = [];
       let tempSalaryComponents = [{id: 1, name: 'Grundgehalt', value: 0}];
 
@@ -1216,24 +1358,19 @@
           if (!state.settings.sort) state.settings.sort = {};
           if (!state.liabilities) state.liabilities = [];
           if (!state.salaryHistory) state.salaryHistory = { husband: [], wife: [] };
+          if (!state.depotHistory) state.depotHistory = [];
+          if (!state.accountTracker) state.accountTracker = [];
           if (!state.expenses.rentOwner) state.expenses.rentOwner = "both";
           if (!state.expenses.householdOwner) state.expenses.householdOwner = "both";
           if (!state.calculated) state.calculated = { mtlIncome: 0, mtlExpenses: 0 };
           
-          if (state.income) {
-              if (typeof state.income.kindergeldMonthly !== 'undefined') { state.income.kindergeldAnnual = state.income.kindergeldMonthly * 12; delete state.income.kindergeldMonthly; }
-              if (typeof state.income.otherMonthly !== 'undefined') { state.income.otherAnnual = state.income.otherMonthly * 12; delete state.income.otherMonthly; }
-              if (typeof state.income.kindergeldAnnual === 'undefined') state.income.kindergeldAnnual = 0;
-              if (typeof state.income.otherAnnual === 'undefined') state.income.otherAnnual = 0;
-          }
-
           if (state.depot) {
               state.depot.forEach(d => {
                   if(typeof d.anzahl === 'undefined') d.anzahl = 1;
                   if(typeof d.kaufpreis === 'undefined') d.kaufpreis = d.value || 0;
                   if(typeof d.aktuellerPreis === 'undefined') d.aktuellerPreis = d.value || 0;
                   if(typeof d.ticker === 'undefined') { d.ticker = d.wkn || ""; delete d.wkn; }
-                  if(typeof d.isinWkn === 'undefined') d.isinWkn = ""; // Initialisierung ISIN/WKN
+                  if(typeof d.isinWkn === 'undefined') d.isinWkn = "";
                   if(typeof d.bank === 'undefined') d.bank = "";
                   d.value = d.anzahl * d.aktuellerPreis;
               });
@@ -1241,6 +1378,7 @@
 
           loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
           renderAllTables(); renderSalaryComponents(); renderSalaryHistoryTables();
+          renderDepotHistoryTable(); renderAccountTrackerTable();
           updateCalculationsAndCharts(); updateDepotTimestamp();
       }
 
@@ -1289,7 +1427,7 @@
           state.settings.names.wife = document.getElementById('set-name-wife').value.trim() || "Ehefrau";
           state.settings.names.child1 = document.getElementById('set-name-child1').value.trim() || "Kind 1";
           state.settings.names.child2 = document.getElementById('set-name-child2').value.trim() || "Kind 2";
-          saveToLocalStorage(); applyDynamicNames(); syncOwnerDropdowns(); updateCalculationsAndCharts(); renderSalaryChart();
+          saveToLocalStorage(); applyDynamicNames(); syncOwnerDropdowns(); updateCalculationsAndCharts(); renderSalaryChart(); renderAllTables();
       }
 
       function handleApiKeyChange() {
@@ -1300,9 +1438,25 @@
       function updateTaxSetting() { state.settings.applyCapitalGainsTax = document.getElementById('set-tax-cg').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       function toggleImmoEK() { state.settings.includeImmoInEK = document.getElementById('immo-ek-toggle').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       
+      // ERWEITERTE OWNER OPTIONS: Ehemann, Ehefrau, Kind 1, Kind 2
       function getOwnerOptionsHtml(currentVal) {
           const names = state.settings.names;
-          return `<option value="both" ${currentVal==='both'?'selected':''}>Gemeinsam</option><option value="husband" ${currentVal==='husband'?'selected':''}>${escapeHTML(names.husband)}</option><option value="wife" ${currentVal==='wife'?'selected':''}>${escapeHTML(names.wife)}</option>`;
+          return `
+              <option value="both" ${currentVal==='both'?'selected':''}>Gemeinsam</option>
+              <option value="husband" ${currentVal==='husband'?'selected':''}>${escapeHTML(names.husband)}</option>
+              <option value="wife" ${currentVal==='wife'?'selected':''}>${escapeHTML(names.wife)}</option>
+              <option value="child1" ${currentVal==='child1'?'selected':''}>${escapeHTML(names.child1)}</option>
+              <option value="child2" ${currentVal==='child2'?'selected':''}>${escapeHTML(names.child2)}</option>
+          `;
+      }
+
+      function getOwnerNameByCode(code) {
+          const names = state.settings.names;
+          if (code === 'husband') return names.husband;
+          if (code === 'wife') return names.wife;
+          if (code === 'child1') return names.child1;
+          if (code === 'child2') return names.child2;
+          return 'Gemeinsam';
       }
 
       function syncOwnerDropdowns() {
@@ -1312,13 +1466,20 @@
       }
 
       function switchTab(tabId) {
-          ['dashboard', 'income', 'expenses', 'assets', 'immo', 'children', 'settings', 'salary'].forEach(id => {
-              document.getElementById(`tab-${id}`).classList.add('hidden');
-              document.getElementById(`nav-${id}`).classList.remove('bg-indigo-50', 'text-indigo-700');
-              document.getElementById(`nav-${id}`).classList.add('text-slate-600');
+          ['dashboard', 'income', 'expenses', 'assets', 'depotHistory', 'immo', 'children', 'accountTracker', 'settings', 'salary'].forEach(id => {
+              const el = document.getElementById(`tab-${id}`);
+              const navEl = document.getElementById(`nav-${id}`);
+              if (el) el.classList.add('hidden');
+              if (navEl) {
+                  navEl.classList.remove('bg-indigo-50', 'text-indigo-700');
+                  navEl.classList.add('text-slate-600');
+              }
           });
-          document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-          document.getElementById(`nav-${tabId}`).classList.add('bg-indigo-50', 'text-indigo-700');
+          
+          const targetTab = document.getElementById(`tab-${tabId}`);
+          const targetNav = document.getElementById(`nav-${tabId}`);
+          if (targetTab) targetTab.classList.remove('hidden');
+          if (targetNav) targetNav.classList.add('bg-indigo-50', 'text-indigo-700');
           
           if (window.innerWidth < 768) {
               document.getElementById('sidebar-nav').classList.add('-translate-x-full');
@@ -1380,19 +1541,18 @@
                   const parsed = JSON.parse(e.target.result);
                   if (!parsed || typeof parsed !== 'object' || !parsed.settings || !parsed.income) { alert("Fehler: Die Datei hat keine gültige FamFinanz-Struktur."); return; }
                   state = parsed; saveToLocalStorage(); loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
-                  renderAllTables(); renderSalaryHistoryTables(); updateCalculationsAndCharts(); renderSalaryChart(); updateDepotTimestamp();
+                  renderAllTables(); renderSalaryHistoryTables(); renderDepotHistoryTable(); renderAccountTrackerTable(); updateCalculationsAndCharts(); renderSalaryChart(); updateDepotTimestamp();
                   alert("Backup erfolgreich eingelesen!");
               } catch(err) { alert("Fehler beim Lesen der Datei."); }
           };
           reader.readAsText(file);
       }
 
-      // EXPORT FÜR WERTPAPIERDEPOT (Inklusive ISIN/WKN)
       function exportDepotCSV() {
           let csvContent = "data:text/csv;charset=utf-8,Typ;Bezeichnung;ISIN_WKN;Bank/Broker;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Akt. Kurs;Gesamtwert\n";
           state.depot.forEach(item => {
               let row = [
-                  `"${item.type||''}"`, `"${item.name||''}"`, `"${item.isinWkn||''}"`, `"${item.bank||''}"`, `"${item.ticker||''}"`, `"${item.owner||''}"`,
+                  `"${item.type||''}"`, `"${item.name||''}"`, `"${item.isinWkn||''}"`, `"${item.bank||''}"`, `"${item.ticker||''}"`, `"${getOwnerNameByCode(item.owner)}"`,
                   `"${item.anzahl||0}"`.replace('.', ','), `"${item.kaufpreis||0}"`.replace('.', ','),
                   `"${item.aktuellerPreis||0}"`.replace('.', ','), `"${item.value||0}"`.replace('.', ',')
               ];
@@ -1460,6 +1620,7 @@
       }
       function deleteSalaryEntry(owner, idx) { state.salaryHistory[owner].splice(idx, 1); saveToLocalStorage(); renderSalaryHistoryTables(); renderSalaryChart(); }
       function parseMMYYtoAbsolute(str) { if(!str || !str.trim()) return null; const p = str.trim().split('/'); if(p.length !== 2) return null; let m = parseInt(p[0], 10); let y = parseInt(p[1], 10); if(y < 100) y += 2000; return { month: m, year: y, abs: y * 12 + m }; }
+      
       function renderSalaryChart() { 
           const ctx = document.getElementById('chartSalaryHistory'); if(!ctx) return;
           const today = new Date(); const currentAbs = today.getFullYear() * 12 + (today.getMonth() + 1);
@@ -1475,7 +1636,13 @@
           else { charts.salaryHistory = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: state.settings.names.husband, data: dataH, borderColor: '#4f46e5', backgroundColor: 'rgba(79,46,229,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }, { label: state.settings.names.wife, data: dataW, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { datalabels: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + formatEuroDisplay(ctx.parsed.y) + ' €'; } } } }, scales: { x: { ticks: { font: { size: 10 }, maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { font: { size: 10 } } } } } }); }
       }
 
-      function renderAllTables() { Object.keys(TABLE_CONFIGS).forEach(key => renderGenericTable(key)); renderThSotiList(); renderChildTrackerTables(); }
+      function renderAllTables() { 
+          Object.keys(TABLE_CONFIGS).forEach(key => renderGenericTable(key)); 
+          renderThSotiList(); 
+          renderChildTrackerTables();
+          renderDepotHistoryTable();
+          renderAccountTrackerTable();
+      }
       
       function sortTable(configKey, field) {
           if (!state.settings.sort) state.settings.sort = {}; let current = state.settings.sort[configKey] || { field: field, dir: 'desc' };
@@ -1555,10 +1722,26 @@
                   td.appendChild(input); tr.appendChild(td);
               });
               
-              const tdDel = document.createElement('td'); tdDel.className = 'text-right w-10';
+              // AKTIONSSPALTE (Verkaufen-Icon + Löschen-Icon beim Wertpapierdepot)
+              const tdDel = document.createElement('td'); tdDel.className = 'text-right w-16';
+              const actionWrapper = document.createElement('div'); actionWrapper.className = 'flex items-center justify-end gap-1';
+
+              if (configKey === 'depot') {
+                  const btnSell = document.createElement('button');
+                  btnSell.className = 'text-emerald-600 p-1 hover:bg-emerald-50 rounded transition-colors tooltip';
+                  btnSell.title = 'Position verkaufen & in Historie überführen';
+                  btnSell.innerHTML = '<i data-lucide="badge-dollar-sign" class="w-4 h-4"></i>';
+                  btnSell.onclick = () => openSellModal(index);
+                  actionWrapper.appendChild(btnSell);
+              }
+
               const btnDel = document.createElement('button'); btnDel.className = 'text-rose-500 p-1 hover:bg-rose-50 rounded transition-colors';
               btnDel.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>'; btnDel.onclick = () => handleTableDelete(config.path, index, configKey);
-              tdDel.appendChild(btnDel); tr.appendChild(tdDel); tbody.appendChild(tr);
+              
+              actionWrapper.appendChild(btnDel);
+              tdDel.appendChild(actionWrapper); 
+              tr.appendChild(tdDel); 
+              tbody.appendChild(tr);
           });
           lucide.createIcons();
       }
@@ -1580,7 +1763,222 @@
           saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
       }
 
-      // --- AKTUELLE KURSABFRAGE ÜBER DIE TWELVE DATA API INKL. FEHLERANZEIGE UND GEBÜNDELTER ANFRAGE ---
+      // --- VERKAUFS-MODAL & HISTORIE-LOGIK ---
+      function openSellModal(index) {
+          activeSellingAssetIndex = index;
+          const asset = state.depot[index];
+          if (!asset) return;
+
+          document.getElementById('sell-asset-name').innerText = asset.name || "Wertpapier";
+          document.getElementById('sell-anzahl').value = asset.anzahl || 1;
+          document.getElementById('sell-kaufpreis').value = formatEuroDisplay(asset.kaufpreis || 0);
+          document.getElementById('sell-verkaufskurs').value = formatEuroDisplay(asset.aktuellerPreis || asset.kaufpreis || 0);
+          document.getElementById('sell-gebuehren').value = "0,00";
+          document.getElementById('sell-tax-checkbox').checked = state.settings.applyCapitalGainsTax || false;
+
+          calculateSellPreview();
+          document.getElementById('sell-modal').classList.remove('hidden');
+          lucide.createIcons();
+      }
+
+      function closeSellModal() {
+          document.getElementById('sell-modal').classList.add('hidden');
+          activeSellingAssetIndex = null;
+      }
+
+      function calculateSellPreview() {
+          const anzahl = parseFloat(document.getElementById('sell-anzahl').value) || 0;
+          const kaufpreis = parseEuroInput(document.getElementById('sell-kaufpreis').value);
+          const verkaufskurs = parseEuroInput(document.getElementById('sell-verkaufskurs').value);
+          const gebuehren = parseEuroInput(document.getElementById('sell-gebuehren').value);
+          const withTax = document.getElementById('sell-tax-checkbox').checked;
+
+          const bruttoGewinnPerShare = verkaufskurs - kaufpreis;
+          let netResult = 0;
+
+          if (withTax) {
+              netResult = (anzahl * bruttoGewinnPerShare * (1 - 0.26375)) - gebuehren;
+          } else {
+              netResult = (anzahl * bruttoGewinnPerShare) - gebuehren;
+          }
+
+          const resEl = document.getElementById('sell-preview-result');
+          resEl.innerText = `${formatEuroDisplay(netResult)} €`;
+          resEl.className = netResult >= 0 ? "text-sm font-extrabold text-emerald-600" : "text-sm font-extrabold text-rose-600";
+          
+          return netResult;
+      }
+
+      function confirmSellAsset() {
+          if (activeSellingAssetIndex === null) return;
+          const asset = state.depot[activeSellingAssetIndex];
+          if (!asset) return;
+
+          const anzahl = parseFloat(document.getElementById('sell-anzahl').value) || 0;
+          const kaufpreis = parseEuroInput(document.getElementById('sell-kaufpreis').value);
+          const verkaufskurs = parseEuroInput(document.getElementById('sell-verkaufskurs').value);
+          const gebuehren = parseEuroInput(document.getElementById('sell-gebuehren').value);
+          const withTax = document.getElementById('sell-tax-checkbox').checked;
+
+          const netGain = calculateSellPreview();
+          const bruttoGainTotal = anzahl * (verkaufskurs - kaufpreis);
+          const taxPaid = withTax && bruttoGainTotal > 0 ? (bruttoGainTotal * 0.26375) : 0;
+
+          const historyEntry = {
+              id: "his_" + Date.now(),
+              sellDate: new Date().toISOString().split('T')[0],
+              type: asset.type,
+              name: asset.name,
+              isinWkn: asset.isinWkn || "",
+              bank: asset.bank || "",
+              ticker: asset.ticker || "",
+              owner: asset.owner || "both",
+              anzahl: anzahl,
+              kaufpreis: kaufpreis,
+              verkaufskurs: verkaufskurs,
+              gebuehren: gebuehren,
+              taxPaid: taxPaid,
+              netGain: netGain
+          };
+
+          state.depotHistory.push(historyEntry);
+          state.depot.splice(activeSellingAssetIndex, 1);
+
+          saveToLocalStorage();
+          closeSellModal();
+          renderGenericTable('depot');
+          renderDepotHistoryTable();
+          updateCalculationsAndCharts();
+          alert("Position wurde erfolgreich verkauft und in die Wertpapierhistorie verschoben.");
+      }
+
+      function renderDepotHistoryTable() {
+          const tbody = document.getElementById('depot-history-table-body');
+          const badge = document.getElementById('sum-realized-gains-badge');
+          if (!tbody) return;
+          tbody.innerHTML = '';
+
+          let totalNetGains = 0;
+          state.depotHistory.sort((a,b) => new Date(b.sellDate) - new Date(a.sellDate));
+
+          state.depotHistory.forEach((item, idx) => {
+              totalNetGains += item.netGain;
+              const tr = document.createElement('tr');
+              tr.className = 'border-b border-slate-100 text-xs hover:bg-slate-50 transition-colors';
+
+              const colorClass = item.netGain >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
+              const sign = item.netGain > 0 ? '+' : '';
+
+              tr.innerHTML = `
+                  <td class="py-2.5 font-medium text-slate-500">${item.sellDate}</td>
+                  <td class="py-2.5">
+                      <div class="font-bold text-slate-800">${escapeHTML(item.name)}</div>
+                      <div class="text-[10px] text-slate-400">${escapeHTML(item.isinWkn)} | ${escapeHTML(item.bank)}</div>
+                  </td>
+                  <td class="py-2.5 font-medium">${escapeHTML(getOwnerNameByCode(item.owner))}</td>
+                  <td class="py-2.5 text-right font-semibold">${item.anzahl}</td>
+                  <td class="py-2.5 text-right">${formatEuroDisplay(item.kaufpreis)} €</td>
+                  <td class="py-2.5 text-right font-semibold text-slate-800">${formatEuroDisplay(item.verkaufskurs)} €</td>
+                  <td class="py-2.5 text-right text-rose-500">${formatEuroDisplay(item.gebuehren)} €</td>
+                  <td class="py-2.5 text-right text-slate-500">${formatEuroDisplay(item.taxPaid)} €</td>
+                  <td class="py-2.5 text-right ${colorClass}">${sign}${formatEuroDisplay(item.netGain)} €</td>
+                  <td class="py-2.5 text-right">
+                      <button onclick="deleteDepotHistoryEntry(${idx})" class="text-rose-400 hover:text-rose-600 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                  </td>
+              `;
+              tbody.appendChild(tr);
+          });
+
+          if (badge) {
+              badge.innerText = `Gesamtertrag: ${totalNetGains >= 0 ? '+' : ''}${formatEuroDisplay(totalNetGains)} €`;
+              badge.className = totalNetGains >= 0 ? "px-3 py-1 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl" : "px-3 py-1 bg-rose-50 text-rose-700 font-bold text-sm rounded-xl";
+          }
+          lucide.createIcons();
+      }
+
+      function deleteDepotHistoryEntry(idx) {
+          if (confirm("Möchtest du diesen Historien-Eintrag wirklich löschen?")) {
+              state.depotHistory.splice(idx, 1);
+              saveToLocalStorage();
+              renderDepotHistoryTable();
+              updateCalculationsAndCharts();
+          }
+      }
+
+      // --- KONTOTRACKER (TAGESGELDHOPPING) LOGIK ---
+      function addTrackedAccount() {
+          state.accountTracker.push({
+              id: "acc_" + Date.now(),
+              bank: "Bank Name",
+              owner: "both",
+              openDate: new Date().toISOString().split('T')[0],
+              closeDate: "",
+              lockPeriodMonths: 12
+          });
+          saveToLocalStorage();
+          renderAccountTrackerTable();
+      }
+
+      function updateTrackedAccount(index, field, value) {
+          state.accountTracker[index][field] = value;
+          saveToLocalStorage();
+          renderAccountTrackerTable();
+      }
+
+      function deleteTrackedAccount(index) {
+          state.accountTracker.splice(index, 1);
+          saveToLocalStorage();
+          renderAccountTrackerTable();
+      }
+
+      function renderAccountTrackerTable() {
+          const tbody = document.getElementById('account-tracker-table-body');
+          if (!tbody) return;
+          tbody.innerHTML = '';
+
+          const today = new Date();
+
+          state.accountTracker.forEach((acc, idx) => {
+              const tr = document.createElement('tr');
+              tr.className = 'border-b border-slate-100 text-xs hover:bg-slate-50 transition-colors';
+
+              // Datum 'Wieder Neukunde ab' berechnen
+              let newCustomerDateStr = "-";
+              let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Aktiv</span>';
+
+              if (acc.closeDate && acc.closeDate.trim() !== '') {
+                  const closeD = new Date(acc.closeDate);
+                  if (!isNaN(closeD.getTime())) {
+                      const months = parseInt(acc.lockPeriodMonths) || 12;
+                      closeD.setMonth(closeD.getMonth() + months);
+                      newCustomerDateStr = closeD.toLocaleDateString('de-DE');
+
+                      if (today >= closeD) {
+                          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Wieder Neukunde!</span>';
+                      } else {
+                          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Sperrfrist</span>';
+                      }
+                  }
+              }
+
+              tr.innerHTML = `
+                  <td class="py-2"><input type="text" value="${escapeHTML(acc.bank)}" onchange="updateTrackedAccount(${idx}, 'bank', this.value)" class="w-full px-2 py-1 bg-transparent font-semibold border-b border-transparent hover:border-slate-200 focus:outline-none"></td>
+                  <td class="py-2"><select onchange="updateTrackedAccount(${idx}, 'owner', this.value)" class="px-2 py-1 border border-slate-200 bg-white rounded-lg text-xs">${getOwnerOptionsHtml(acc.owner)}</select></td>
+                  <td class="py-2"><input type="date" value="${acc.openDate || ''}" onchange="updateTrackedAccount(${idx}, 'openDate', this.value)" class="px-2 py-1 border border-slate-200 rounded-lg text-xs bg-white"></td>
+                  <td class="py-2"><input type="date" value="${acc.closeDate || ''}" onchange="updateTrackedAccount(${idx}, 'closeDate', this.value)" class="px-2 py-1 border border-slate-200 rounded-lg text-xs bg-white"></td>
+                  <td class="py-2"><input type="number" value="${acc.lockPeriodMonths || 12}" onchange="updateTrackedAccount(${idx}, 'lockPeriodMonths', parseInt(this.value)||0)" class="w-16 px-2 py-1 text-center border border-slate-200 rounded-lg text-xs bg-white"></td>
+                  <td class="py-2 font-bold text-slate-700">${newCustomerDateStr}</td>
+                  <td class="py-2">${statusBadge}</td>
+                  <td class="py-2 text-right">
+                      <button onclick="deleteTrackedAccount(${idx})" class="text-rose-500 p-1 hover:bg-rose-50 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                  </td>
+              `;
+              tbody.appendChild(tr);
+          });
+          lucide.createIcons();
+      }
+
+      // --- TWELVE DATA API KURSABFRAGE ---
       async function updateDepotPrices() {
           const btn = document.getElementById('btn-update-prices');
           const originalHtml = btn.innerHTML;
@@ -1613,7 +2011,6 @@
           }
 
           try {
-              // 3. Gebündelte Abfrage (Batch Request) an Twelve Data
               const symbolsParam = encodeURIComponent(tickersToFetch.join(','));
               const priceUrl = `https://api.twelvedata.com/price?symbol=${symbolsParam}&apikey=${apiKey.trim()}`;
               
@@ -1629,7 +2026,6 @@
                   rawPrices = priceResponse;
               }
 
-              // Währungsumrechnung (USD/EUR) bei US-Börsenplätzen
               let usdToEurRate = 1.0;
               const hasUsTickers = tickersToFetch.some(t => !t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE'));
 
@@ -1642,15 +2038,12 @@
                               usdToEurRate = parseFloat(fxData.price) || 1.0;
                           }
                       }
-                  } catch (fxErr) {
-                      console.warn("FX-Kurs konnte nicht geladen werden, verwende 1.0", fxErr);
-                  }
+                  } catch (fxErr) { console.warn("FX-Kurs Fehler", fxErr); }
               }
 
               let successCount = 0;
               let failedList = [];
 
-              // Kurse verarbeiten
               state.depot.forEach(item => {
                   if (!item.ticker || item.ticker.trim() === '') return;
                   const t = item.ticker.trim().toUpperCase();
@@ -1658,12 +2051,9 @@
 
                   if (symbolData && symbolData.price) {
                       let parsedPrice = parseFloat(symbolData.price);
-                      
-                      // US-Kurs Umrechnung
                       if (!t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE')) {
                           parsedPrice = parsedPrice * usdToEurRate;
                       }
-
                       item.aktuellerPreis = parsedPrice;
                       item.value = (item.anzahl || 0) * parsedPrice;
                       successCount++;
@@ -1678,37 +2068,26 @@
               updateCalculationsAndCharts();
               updateDepotTimestamp();
 
-              // 4. Auswertung und detaillierte Meldungen an den Nutzer
               const totalCount = itemsToFetch.length;
-
               if (successCount === totalCount) {
                   btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Erfolgreich (${successCount}/${totalCount})`;
                   btn.classList.replace('text-blue-700', 'text-emerald-700');
                   btn.classList.replace('bg-blue-100', 'bg-emerald-100');
-                  
-                  setTimeout(() => {
-                      alert(`Erfolg: Alle ${totalCount} Depot-Positionen wurden erfolgreich aktualisiert!`);
-                  }, 150);
+                  setTimeout(() => alert(`Erfolg: Alle ${totalCount} Depot-Positionen wurden erfolgreich aktualisiert!`), 150);
               } else {
                   btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Teilweise (${successCount}/${totalCount})`;
                   btn.classList.replace('text-blue-700', 'text-amber-700');
                   btn.classList.replace('bg-blue-100', 'bg-amber-100');
-
                   let failedText = failedList.map(i => `• ${i.name || 'Unbenannt'} (Ticker: ${i.ticker || 'keiner'})`).join('\n');
-                  setTimeout(() => {
-                      alert(`Update abgeschlossen: ${successCount} von ${totalCount} Kursen geladen.\n\nFolgende Positionen konnten nicht geladen werden (bitte Ticker prüfen):\n${failedText}`);
-                  }, 150);
+                  setTimeout(() => alert(`Update abgeschlossen: ${successCount} von ${totalCount} Kursen geladen.\n\nFolgende Positionen konnten nicht geladen werden:\n${failedText}`), 150);
               }
 
           } catch (err) {
-              console.error("Twelve Data API Fehler:", err);
+              console.error("API Fehler:", err);
               btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehler beim Abruf`;
               btn.classList.replace('text-blue-700', 'text-rose-700');
               btn.classList.replace('bg-blue-100', 'bg-rose-100');
-              
-              setTimeout(() => {
-                  alert("Fehler bei der Verbindung zu Twelve Data. Bitte überprüfe deine Internetverbindung und den API-Key.");
-              }, 150);
+              setTimeout(() => alert("Fehler bei der Verbindung zu Twelve Data. Bitte API-Key und Internetverbindung prüfen."), 150);
           }
 
           setTimeout(() => {
@@ -1857,15 +2236,26 @@
           });
 
           const mtlExpenses = expH + expW + expB;
-          let astH = 0, astW = 0, astB = 0;
+          let astH = 0, astW = 0, astB = 0, astC1 = 0, astC2 = 0;
           
           let a_reH=0, a_reW=0, a_reB=0; if(state.assets.realestate) state.assets.realestate.forEach(i => { if(i.owner==='husband') a_reH+=i.value; else if(i.owner==='wife') a_reW+=i.value; else a_reB+=i.value; }); updateCategorySum('sum-ast-immo', a_reH, a_reW, a_reB); astH += a_reH; astW += a_reW; astB += a_reB;
           let a_tgH=0, a_tgW=0, a_tgB=0; if(state.assets.tagesgeld) state.assets.tagesgeld.forEach(i => { if(i.owner==='husband') a_tgH+=i.value; else if(i.owner==='wife') a_tgW+=i.value; else a_tgB+=i.value; }); updateCategorySum('sum-ast-tg', a_tgH, a_tgW, a_tgB); astH += a_tgH; astW += a_tgW; astB += a_tgB;
           let a_fgH=0, a_fgW=0, a_fgB=0; if(state.assets.festgeld) state.assets.festgeld.forEach(i => { if(i.owner==='husband') a_fgH+=i.value; else if(i.owner==='wife') a_fgW+=i.value; else a_fgB+=i.value; }); updateCategorySum('sum-ast-fg', a_fgH, a_fgW, a_fgB); astH += a_fgH; astW += a_fgW; astB += a_fgB;
           
-          let a_dpH=0, a_dpW=0, a_dpB=0; if(state.depot) state.depot.forEach(i => { if(i.owner==='husband') a_dpH+=i.value; else if(i.owner==='wife') a_dpW+=i.value; else a_dpB+=i.value; }); updateCategorySum('sum-ast-depot', a_dpH, a_dpW, a_dpB); astH += a_dpH; astW += a_dpW; astB += a_dpB;
+          let a_dpH=0, a_dpW=0, a_dpB=0; 
+          if(state.depot) {
+              state.depot.forEach(i => { 
+                  if(i.owner==='husband') a_dpH+=i.value; 
+                  else if(i.owner==='wife') a_dpW+=i.value; 
+                  else if(i.owner==='child1') astC1+=i.value; 
+                  else if(i.owner==='child2') astC2+=i.value; 
+                  else a_dpB+=i.value; 
+              }); 
+          } 
+          updateCategorySum('sum-ast-depot', a_dpH, a_dpW, a_dpB); astH += a_dpH; astW += a_dpW; astB += a_dpB;
 
-          const totalAssets = astH + astW + astB;
+          // WERTPAPIERE DER KINDER FLIESSEN IN DIE VERMÖGENSBERECHUNG EIN
+          const totalAssets = astH + astW + astB + astC1 + astC2;
           let liaH = 0, liaW = 0, liaB = 0; if(state.liabilities) { state.liabilities.forEach(l => { if(l.owner === 'husband') liaH += l.value; else if(l.owner === 'wife') liaW += l.value; else liaB += l.value; }); } updateCategorySum('sum-lia', liaH, liaW, liaB);
 
           const totalLiabilities = liaH + liaW + liaB; const netWorth = totalAssets - totalLiabilities;
@@ -1879,7 +2269,7 @@
           document.getElementById('split-lia-husband').innerText = formatEuroDisplay(liaH) + " €"; document.getElementById('split-lia-wife').innerText = formatEuroDisplay(liaW) + " €"; document.getElementById('split-lia-both').innerText = formatEuroDisplay(liaB) + " €";
           document.getElementById('split-net-husband').innerText = formatEuroDisplay(netH) + " €"; document.getElementById('split-net-wife').innerText = formatEuroDisplay(netW) + " €"; document.getElementById('split-net-both').innerText = formatEuroDisplay(netB) + " €";
 
-          const tragbareLast = Math.max(0, mtlIncome - mtlExpenses); let immoGesamtValue = a_reH + a_reW + a_reB; let totalEK = astH + astW + astB;
+          const tragbareLast = Math.max(0, mtlIncome - mtlExpenses); let immoGesamtValue = a_reH + a_reW + a_reB; let totalEK = astH + astW + astB + astC1 + astC2;
           if(!state.settings.includeImmoInEK) { totalEK -= immoGesamtValue; }
           
           if(document.getElementById('immo-calc-ek')) { 
@@ -1975,16 +2365,96 @@
       }
 
       function initCharts() { 
-          const ctxCf = document.getElementById('chartCashflow'); const ctxExSt = document.getElementById('chartExpenseStructure'); const ctxAsset = document.getElementById('chartAssetAllocation'); const ctxDepot = document.getElementById('chartDepotAllocation'); const ctxChildren = document.getElementById('chartChildren');
-          if(!ctxCf || !ctxAsset || !ctxDepot || !ctxChildren || !ctxExSt) return;
+          const ctxCf = document.getElementById('chartCashflow'); 
+          const ctxExSt = document.getElementById('chartExpenseStructure'); 
+          const ctxAsset = document.getElementById('chartAssetAllocation'); 
+          const ctxDepotOwner = document.getElementById('chartDepotOwnerComparison');
+          const ctxRealized = document.getElementById('chartRealizedGains');
+          const ctxChildren = document.getElementById('chartChildren');
+
+          if(!ctxCf || !ctxAsset || !ctxDepotOwner || !ctxChildren || !ctxExSt || !ctxRealized) return;
           const mtlInc = state.calculated ? state.calculated.mtlIncome : 0; const mtlExp = state.calculated ? state.calculated.mtlExpenses : 0; const standardChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } };
+          
           if(charts.cashflow) { charts.cashflow.data.datasets[0].data = [mtlExp, Math.max(0, mtlInc-mtlExp)]; charts.cashflow.update(); } else { charts.cashflow = new Chart(ctxCf, { type: 'doughnut', data: { labels: ['Kosten & Sparen', 'Freier Cashflow'], datasets: [{ data: [mtlExp, Math.max(0, mtlInc-mtlExp)], backgroundColor: ['#ef4444', '#10b981'], borderWidth: 0 }] }, options: standardChartOptions }); }
+          
           const sumMiete = state.expenses.rent || 0; const sumHaushalt = state.expenses.household || 0; const sumInvest = state.investments.reduce((s,i)=>s+i.value,0); const sumInsur = state.insurances.reduce((s,i)=>s+i.value,0); const sumCar = state.carExpenses.reduce((s,i)=>s+i.value,0); const sumLeisure = state.leisureExpenses.reduce((s,i)=>s+i.value,0);
           if(charts.expenseStructure) { charts.expenseStructure.data.datasets[0].data = [sumMiete, sumHaushalt, sumInvest, sumInsur, sumCar, sumLeisure]; charts.expenseStructure.update(); } else { charts.expenseStructure = new Chart(ctxExSt, { type: 'doughnut', data: { labels: ['Wohnen', 'Haushalt', 'Sparen', 'Versicherung', 'Auto', 'Freizeit'], datasets: [{ data: [sumMiete, sumHaushalt, sumInvest, sumInsur, sumCar, sumLeisure], backgroundColor: ['#f43f5e', '#fda4af', '#10b981', '#3b82f6', '#64748b', '#f59e0b'], borderWidth: 0 }] }, options: standardChartOptions }); }
+          
           const tg = state.assets.tagesgeld ? state.assets.tagesgeld.reduce((s,i)=>s+i.value,0) : 0; const fg = state.assets.festgeld ? state.assets.festgeld.reduce((s,i)=>s+i.value,0) : 0; const dp = state.depot.reduce((s,i)=>s+i.value,0); const re = state.assets.realestate ? state.assets.realestate.reduce((s,i)=>s+i.value,0) : 0;
           if(charts.assets) { charts.assets.data.datasets[0].data = [tg, fg, dp, re]; charts.assets.update(); } else { charts.assets = new Chart(ctxAsset, { type: 'pie', data: { labels: ['Tagesgeld', 'Festgeld', 'Depot', 'Immobilien'], datasets: [{ data: [tg, fg, dp, re], backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f59e0b'], borderWidth: 0 }] }, options: standardChartOptions }); }
-          const depotLabels = state.depot.length > 0 ? state.depot.map(i => i.name) : ['Keine Werte']; const depotData = state.depot.length > 0 ? state.depot.map(i => i.value) : [1]; const depotColors = state.depot.length > 0 ? ['#10b981', '#34d399', '#6ee7b7', '#059669'] : ['#e2e8f0'];
-          if(charts.depot) { charts.depot.data.labels = depotLabels; charts.depot.data.datasets[0].data = depotData; charts.depot.data.datasets[0].backgroundColor = depotColors; charts.depot.update(); } else { charts.depot = new Chart(ctxDepot, { type: 'doughnut', data: { labels: depotLabels, datasets: [{ data: depotData, backgroundColor: depotColors, borderWidth: 0 }] }, options: standardChartOptions }); }
+          
+          // NEU: ZUSAMMENFASSENDES VERGLEICHSDIAGRAMM FÜR DEPOTS DER 4 PERSONEN + GEMEINSAM
+          let depH = 0, depW = 0, depC1 = 0, depC2 = 0, depB = 0;
+          state.depot.forEach(i => {
+              if (i.owner === 'husband') depH += i.value;
+              else if (i.owner === 'wife') depW += i.value;
+              else if (i.owner === 'child1') depC1 += i.value;
+              else if (i.owner === 'child2') depC2 += i.value;
+              else depB += i.value;
+          });
+
+          const names = state.settings.names;
+          const ownerLabels = [names.husband, names.wife, names.child1, names.child2, 'Gemeinsam'];
+          const ownerData = [depH, depW, depC1, depC2, depB];
+
+          if (charts.depotOwnerComparison) {
+              charts.depotOwnerComparison.data.labels = ownerLabels;
+              charts.depotOwnerComparison.data.datasets[0].data = ownerData;
+              charts.depotOwnerComparison.update();
+          } else {
+              charts.depotOwnerComparison = new Chart(ctxDepotOwner, {
+                  type: 'bar',
+                  data: {
+                      labels: ownerLabels,
+                      datasets: [{
+                          label: 'Depotwert (€)',
+                          data: ownerData,
+                          backgroundColor: ['#4f46e5', '#10b981', '#06b6d4', '#f59e0b', '#64748b'],
+                          borderRadius: 8
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false }, datalabels: { display: false } },
+                      scales: { x: { ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { font: { size: 10 } } } }
+                  }
+              });
+          }
+
+          // NEU: DIAGRAMM FÜR REALISIERTE GEWINNE / VERLUSTE
+          let totalRealized = 0;
+          state.depotHistory.forEach(h => totalRealized += h.netGain);
+
+          const realizedLabels = ['Realisierte Verkäufe'];
+          const realizedData = [totalRealized];
+          const realizedColor = totalRealized >= 0 ? '#10b981' : '#ef4444';
+
+          if (charts.realizedGains) {
+              charts.realizedGains.data.datasets[0].data = realizedData;
+              charts.realizedGains.data.datasets[0].backgroundColor = [realizedColor];
+              charts.realizedGains.update();
+          } else {
+              charts.realizedGains = new Chart(ctxRealized, {
+                  type: 'bar',
+                  data: {
+                      labels: realizedLabels,
+                      datasets: [{
+                          label: 'Nettogewinn/-verlust (€)',
+                          data: realizedData,
+                          backgroundColor: [realizedColor],
+                          borderRadius: 8
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { display: false }, datalabels: { display: false } },
+                      scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } }
+                  }
+              });
+          }
+
           const sumChild1 = state.childExpenses.filter(e => e.child === 'child1').reduce((a,b) => a + b.amount, 0); const sumChild2 = state.childExpenses.filter(e => e.child === 'child2').reduce((a,b) => a + b.amount, 0);
           if(charts.children) { charts.children.data.labels = [state.settings.names.child1, state.settings.names.child2]; charts.children.data.datasets[0].data = [sumChild1, sumChild2]; charts.children.update(); } else { charts.children = new Chart(ctxChildren, { type: 'doughnut', data: { labels: [state.settings.names.child1, state.settings.names.child2], datasets: [{ data: [sumChild1, sumChild2], backgroundColor: ['#6366f1', '#10b981'], borderWidth: 0 }] }, options: standardChartOptions }); }
       }
