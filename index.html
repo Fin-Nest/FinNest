@@ -95,7 +95,7 @@
   <!-- MAIN APP WRAPPER -->
   <div id="app-wrapper" class="hidden flex-1 flex flex-col md:flex-row h-full overflow-hidden relative">
       
-      <!-- MOBILE TOP HEADER (Nur auf Handys sichtbar) -->
+      <!-- MOBILE TOP HEADER -->
       <header class="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-30 flex-shrink-0">
           <div class="flex items-center gap-2">
               <div class="p-1.5 bg-indigo-600 rounded-lg text-white">
@@ -111,7 +111,7 @@
       <!-- BACKDROP FOR MOBILE SIDEBAR -->
       <div id="mobile-backdrop" onclick="toggleMobileSidebar()" class="hidden md:hidden fixed inset-0 bg-slate-900/50 z-30 transition-opacity"></div>
 
-      <!-- SIDEBAR NAVIGATION (Desktop: dauerhaft | Mobile: Slide-Over) -->
+      <!-- SIDEBAR NAVIGATION -->
       <aside id="sidebar-nav" class="fixed md:relative inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out w-64 bg-white border-r border-slate-200 flex flex-col justify-between flex-shrink-0 z-40 h-full">
           <div class="p-6 overflow-y-auto">
               <div class="hidden md:flex items-center gap-3 mb-8">
@@ -635,13 +635,17 @@
                       </div>
                   </div>
                   <div class="overflow-x-auto">
-                      <table class="w-full text-left border-collapse min-w-[800px]">
+                      <table class="w-full text-left border-collapse min-w-[900px]">
                           <thead>
                               <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'type')">Typ</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onclick="sortTable('depot', 'name')">Bezeichnung</th>
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'isinWkn')">ISIN / WKN</th>
                                   <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'bank')">Bank / Broker</th>
-                                  <th class="pb-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'ticker')">Ticker</th>
+                                  <!-- HERVORHEBUNG TICKER SPALTE -->
+                                  <th class="pb-3 font-medium cursor-pointer hover:text-amber-700 transition-colors w-28 text-amber-800 bg-amber-50/80 px-2 py-1 rounded-t border-t border-x border-amber-200 shadow-2xs" onclick="sortTable('depot', 'ticker')">
+                                      Ticker *
+                                  </th>
                                   <th class="pb-3 font-medium w-24">Zuordnung</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-24" onclick="sortTable('depot', 'anzahl')">Stückzahl</th>
                                   <th class="pb-3 font-medium text-right cursor-pointer hover:text-indigo-600 transition-colors w-28" onclick="sortTable('depot', 'kaufpreis')">Kaufkurs</th>
@@ -858,11 +862,11 @@
                               </div>
                               <div>
                                   <label class="block text-xs font-semibold text-slate-500 mb-1">Kaufpreis (€)</label>
-                                  <input type="text" id="th-kaufpreis" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-semibold text-sm">
+                                  <input type="text" id="th-kaufpreis" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl font-semibold text-sm">
                               </div>
                               <div>
                                   <label class="block text-xs font-semibold text-slate-500 mb-1">Eigenkapital (€)</label>
-                                  <input type="text" id="th-eigenkapital" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl focus:outline-indigo-600 font-semibold text-sm">
+                                  <input type="text" id="th-eigenkapital" onfocus="setupCurrencyFocus(this)" onblur="setupCurrencyBlur(this); updateThCalculations();" class="w-full px-3 py-2 text-right bg-white border border-slate-200 rounded-xl font-semibold text-sm">
                               </div>
                           </div>
                           <div class="border-t border-slate-200 pt-4 space-y-3">
@@ -1016,7 +1020,7 @@
                   </div>
               </div>
 
-              <!-- NEUE KARTE: TWELVE DATA API SCHNITTSTELLE -->
+              <!-- TWELVE DATA API SCHNITTSTELLE -->
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl space-y-4 avoid-break mt-8">
                   <div class="flex justify-between items-center">
                       <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="key" class="text-blue-600"></i> Twelve Data Live-Kurse API-Key</h3>
@@ -1071,6 +1075,7 @@
           formatter: function(value) { return value > 0 ? formatEuroDisplay(value) + ' €' : ''; }
       });
 
+      // ERWEITERTE TABLE CONFIG: isinWkn integriert
       const TABLE_CONFIGS = {
           realestate: {
               path: ['assets', 'realestate'], tbodyId: 'realestate-table-body',
@@ -1113,8 +1118,9 @@
               cols: [
                   {field: 'type', type: 'datalist', listId: 'depot-types', classes: 'w-24'}, 
                   {field: 'name', type: 'text'},
+                  {field: 'isinWkn', type: 'text', classes: 'w-28 uppercase'}, // 1. WKN/ISIN Spalte direkt nach Name
                   {field: 'bank', type: 'text', classes: 'w-24'},
-                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase'}, 
+                  {field: 'ticker', type: 'text', classes: 'w-28 uppercase font-semibold bg-amber-50/50 border border-amber-200 focus:bg-white rounded'}, // 2. Optische Hervorhebung Ticker
                   {field: 'owner', type: 'select-owner', classes: 'w-24'},
                   {field: 'anzahl', type: 'number', step: '0.0001', classes: 'w-24'},
                   {field: 'kaufpreis', type: 'currency', classes: 'w-28'},
@@ -1227,7 +1233,8 @@
                   if(typeof d.kaufpreis === 'undefined') d.kaufpreis = d.value || 0;
                   if(typeof d.aktuellerPreis === 'undefined') d.aktuellerPreis = d.value || 0;
                   if(typeof d.ticker === 'undefined') { d.ticker = d.wkn || ""; delete d.wkn; }
-                  if(typeof d.bank === 'undefined') { d.bank = ""; }
+                  if(typeof d.isinWkn === 'undefined') d.isinWkn = ""; // Initialisierung ISIN/WKN
+                  if(typeof d.bank === 'undefined') d.bank = "";
                   d.value = d.anzahl * d.aktuellerPreis;
               });
           }
@@ -1380,11 +1387,12 @@
           reader.readAsText(file);
       }
 
+      // EXPORT FÜR WERTPAPIERDEPOT (Inklusive ISIN/WKN)
       function exportDepotCSV() {
-          let csvContent = "data:text/csv;charset=utf-8,Typ;Bezeichnung;Bank/Broker;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Akt. Kurs;Gesamtwert\n";
+          let csvContent = "data:text/csv;charset=utf-8,Typ;Bezeichnung;ISIN_WKN;Bank/Broker;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Akt. Kurs;Gesamtwert\n";
           state.depot.forEach(item => {
               let row = [
-                  `"${item.type||''}"`, `"${item.name||''}"`, `"${item.bank||''}"`, `"${item.ticker||''}"`, `"${item.owner||''}"`,
+                  `"${item.type||''}"`, `"${item.name||''}"`, `"${item.isinWkn||''}"`, `"${item.bank||''}"`, `"${item.ticker||''}"`, `"${item.owner||''}"`,
                   `"${item.anzahl||0}"`.replace('.', ','), `"${item.kaufpreis||0}"`.replace('.', ','),
                   `"${item.aktuellerPreis||0}"`.replace('.', ','), `"${item.value||0}"`.replace('.', ',')
               ];
@@ -1464,7 +1472,7 @@
               let valW = 0; state.salaryHistory.wife.forEach(s => { let st = parseMMYYtoAbsolute(s.start); let en = parseMMYYtoAbsolute(s.end) || {abs: currentAbs}; if(st && m >= st.abs && m <= en.abs) { valW = s.components.reduce((sum, c) => sum + c.value, 0); } }); dataW.push(valW);
           }
           if(charts.salaryHistory) { charts.salaryHistory.data.labels = labels; charts.salaryHistory.data.datasets[0].label = state.settings.names.husband; charts.salaryHistory.data.datasets[0].data = dataH; charts.salaryHistory.data.datasets[1].label = state.settings.names.wife; charts.salaryHistory.data.datasets[1].data = dataW; charts.salaryHistory.update(); } 
-          else { charts.salaryHistory = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: state.settings.names.husband, data: dataH, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }, { label: state.settings.names.wife, data: dataW, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { datalabels: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + formatEuroDisplay(ctx.parsed.y) + ' €'; } } } }, scales: { x: { ticks: { font: { size: 10 }, maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { font: { size: 10 } } } } } }); }
+          else { charts.salaryHistory = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: state.settings.names.husband, data: dataH, borderColor: '#4f46e5', backgroundColor: 'rgba(79,46,229,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }, { label: state.settings.names.wife, data: dataW, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: false, tension: 0, pointRadius: 0, hitRadius: 10, stepped: 'before' }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { datalabels: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + formatEuroDisplay(ctx.parsed.y) + ' €'; } } } }, scales: { x: { ticks: { font: { size: 10 }, maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { font: { size: 10 } } } } } }); }
       }
 
       function renderAllTables() { Object.keys(TABLE_CONFIGS).forEach(key => renderGenericTable(key)); renderThSotiList(); renderChildTrackerTables(); }
@@ -1533,11 +1541,13 @@
                           input.value = item[col.field]; input.className = 'w-full px-2 py-1 bg-transparent text-xs text-right focus:outline-none border-b border-transparent hover:border-slate-200 font-medium';
                           input.onchange = (e) => handleTableUpdate(config.path, index, col.field, parseFloat(e.target.value) || 0, configKey);
                       } else {
-                          input.value = item[col.field] || ''; input.className = 'w-full px-2 py-1 bg-transparent text-xs focus:outline-none border-b border-transparent hover:border-slate-200';
+                          input.value = item[col.field] || ''; 
+                          const baseClass = col.classes ? col.classes : 'w-full px-2 py-1 bg-transparent text-xs focus:outline-none border-b border-transparent hover:border-slate-200';
+                          input.className = baseClass;
                           if (col.placeholder) input.placeholder = col.placeholder;
                           input.onchange = (e) => { 
                               let val = e.target.value; 
-                              if(configKey === 'depot' && col.field === 'ticker') val = val.toUpperCase();
+                              if(configKey === 'depot' && (col.field === 'ticker' || col.field === 'isinWkn')) val = val.toUpperCase();
                               handleTableUpdate(config.path, index, col.field, val, configKey); 
                           };
                       }
@@ -1570,7 +1580,7 @@
           saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
       }
 
-      // --- AKTUELLE KURSABFRAGE ÜBER DIE TWELVE DATA API ---
+      // --- AKTUELLE KURSABFRAGE ÜBER DIE TWELVE DATA API INKL. FEHLERANZEIGE UND GEBÜNDELTER ANFRAGE ---
       async function updateDepotPrices() {
           const btn = document.getElementById('btn-update-prices');
           const originalHtml = btn.innerHTML;
@@ -1585,24 +1595,25 @@
           btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade Kurse...';
           lucide.createIcons();
 
+          const itemsToFetch = [];
           const tickersToFetch = [];
-          let totalCount = 0;
 
           state.depot.forEach(item => {
               if (item.ticker && item.ticker.trim() !== '') {
-                  totalCount++;
+                  itemsToFetch.push(item);
                   tickersToFetch.push(item.ticker.trim().toUpperCase());
               }
           });
 
           if (tickersToFetch.length === 0) {
+              alert("Keine Depot-Positionen mit gültigem Ticker vorhanden.");
               btn.innerHTML = originalHtml;
               lucide.createIcons();
               return;
           }
 
           try {
-              // 1. Kursabruf im Batch-Verfahren
+              // 3. Gebündelte Abfrage (Batch Request) an Twelve Data
               const symbolsParam = encodeURIComponent(tickersToFetch.join(','));
               const priceUrl = `https://api.twelvedata.com/price?symbol=${symbolsParam}&apikey=${apiKey.trim()}`;
               
@@ -1610,21 +1621,15 @@
               if (!res.ok) throw new Error(`HTTP Fehler ${res.status}`);
               const priceResponse = await res.json();
 
-              // In Twelve Data: Bei Einzelabfrage kommt { price: "123.4" }, bei Batch { "AAPL": { price: "123.4" }, ... }
               let rawPrices = {};
               if (tickersToFetch.length === 1) {
                   const singleTicker = tickersToFetch[0];
-                  if (priceResponse.price) {
-                      rawPrices[singleTicker] = priceResponse;
-                  } else {
-                      rawPrices[singleTicker] = priceResponse; // Kann auch Fehlermeldung enthalten
-                  }
+                  rawPrices[singleTicker] = priceResponse;
               } else {
                   rawPrices = priceResponse;
               }
 
-              // 2. Erfassen benötigter FX-Wechselkurse (falls US-Aktien ohne EUR Kurs geliefert werden)
-              // Twelve Data Preise sind meist in Handelswährung. USD -> EUR Wechselkurs ermitteln:
+              // Währungsumrechnung (USD/EUR) bei US-Börsenplätzen
               let usdToEurRate = 1.0;
               const hasUsTickers = tickersToFetch.some(t => !t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE'));
 
@@ -1643,9 +1648,9 @@
               }
 
               let successCount = 0;
-              let failedItems = [];
+              let failedList = [];
 
-              // 3. Kurse verarbeiten und State aktualisieren
+              // Kurse verarbeiten
               state.depot.forEach(item => {
                   if (!item.ticker || item.ticker.trim() === '') return;
                   const t = item.ticker.trim().toUpperCase();
@@ -1654,7 +1659,7 @@
                   if (symbolData && symbolData.price) {
                       let parsedPrice = parseFloat(symbolData.price);
                       
-                      // Kursumrechnung bei US-Titeln ohne deutsche Handelsplatz-Kennzeichnung
+                      // US-Kurs Umrechnung
                       if (!t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE')) {
                           parsedPrice = parsedPrice * usdToEurRate;
                       }
@@ -1663,7 +1668,7 @@
                       item.value = (item.anzahl || 0) * parsedPrice;
                       successCount++;
                   } else {
-                      failedItems.push(item);
+                      failedList.push(item);
                   }
               });
 
@@ -1673,18 +1678,26 @@
               updateCalculationsAndCharts();
               updateDepotTimestamp();
 
+              // 4. Auswertung und detaillierte Meldungen an den Nutzer
+              const totalCount = itemsToFetch.length;
+
               if (successCount === totalCount) {
                   btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Erfolgreich (${successCount}/${totalCount})`;
                   btn.classList.replace('text-blue-700', 'text-emerald-700');
                   btn.classList.replace('bg-blue-100', 'bg-emerald-100');
-              } else if (successCount > 0) {
+                  
+                  setTimeout(() => {
+                      alert(`Erfolg: Alle ${totalCount} Depot-Positionen wurden erfolgreich aktualisiert!`);
+                  }, 150);
+              } else {
                   btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Teilweise (${successCount}/${totalCount})`;
                   btn.classList.replace('text-blue-700', 'text-amber-700');
                   btn.classList.replace('bg-blue-100', 'bg-amber-100');
-              } else {
-                  btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehlgeschlagen`;
-                  btn.classList.replace('text-blue-700', 'text-rose-700');
-                  btn.classList.replace('bg-blue-100', 'bg-rose-100');
+
+                  let failedText = failedList.map(i => `• ${i.name || 'Unbenannt'} (Ticker: ${i.ticker || 'keiner'})`).join('\n');
+                  setTimeout(() => {
+                      alert(`Update abgeschlossen: ${successCount} von ${totalCount} Kursen geladen.\n\nFolgende Positionen konnten nicht geladen werden (bitte Ticker prüfen):\n${failedText}`);
+                  }, 150);
               }
 
           } catch (err) {
@@ -1692,6 +1705,10 @@
               btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehler beim Abruf`;
               btn.classList.replace('text-blue-700', 'text-rose-700');
               btn.classList.replace('bg-blue-100', 'bg-rose-100');
+              
+              setTimeout(() => {
+                  alert("Fehler bei der Verbindung zu Twelve Data. Bitte überprüfe deine Internetverbindung und den API-Key.");
+              }, 150);
           }
 
           setTimeout(() => {
@@ -1744,7 +1761,7 @@
       function addFestgeld() { state.assets.festgeld.push({ id: "fg_"+Date.now(), bank: "Bank", interest: 0, value: 0, owner: "both" }); saveToLocalStorage(); renderGenericTable('festgeld'); updateCalculationsAndCharts(); }
       
       function addDepotAsset() { 
-          state.depot.push({ id: "dep_"+Date.now(), type: "Aktie", name: "Neu", bank: "", ticker: "", anzahl: 1, kaufpreis: 0, aktuellerPreis: 0, value: 0, owner: "both" }); 
+          state.depot.push({ id: "dep_"+Date.now(), type: "Aktie", name: "Neu", isinWkn: "", bank: "", ticker: "", anzahl: 1, kaufpreis: 0, aktuellerPreis: 0, value: 0, owner: "both" }); 
           saveToLocalStorage(); renderGenericTable('depot'); updateCalculationsAndCharts(); 
       }
       
