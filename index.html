@@ -1398,29 +1398,34 @@
             parseAndLoadState(v11Data); 
             document.getElementById('app-wrapper').classList.remove('hidden'); 
             
-            // KORREKTUR: Expliziter Aufruf der Charts, sobald der Wrapper sichtbar ist!
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    initCharts();
-                    renderSalaryChart();
-                }, 50);
-            });
+            // Erstes Zeichnen
+            triggerMobileChartRender();
         }
     } else {
         parseAndLoadState(null); 
         document.getElementById('app-wrapper').classList.remove('hidden');
 
-        // KORREKTUR: Auch beim ersten Start ohne Daten die Charts verzögert rendern
-        requestAnimationFrame(() => {
-            setTimeout(() => {
-                initCharts();
-                renderSalaryChart();
-            }, 50);
-        });
+        // Erstes Zeichnen ohne Daten
+        triggerMobileChartRender();
     }
     updateEncryptionUI();
     lucide.createIcons();
 });
+
+// Sicheres Zeichnen & Anpassen für mobile Gerätegrößen
+function triggerMobileChartRender() {
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            initCharts();
+            renderSalaryChart();
+            
+            // Zweiter Aufruf nach 150ms zwingt das Smartphone-Layout zur Korrektur
+            setTimeout(() => {
+                resizeAllCharts();
+            }, 150);
+        }, 50);
+    });
+}
 
       function unlockApp() {
     const pwdInput = document.getElementById('unlock-pwd').value; 
@@ -2723,6 +2728,15 @@
           if(charts.wealthProjection) { charts.wealthProjection.data.labels = nominalLabels; charts.wealthProjection.data.datasets[0].data = nominalData; charts.wealthProjection.data.datasets[1].data = realData; charts.wealthProjection.update(); } else { charts.wealthProjection = new Chart(ctx, { type: 'line', data: { labels: nominalLabels, datasets: [{ label: 'Nominales Brutto-Vermögen', data: nominalData, borderColor: '#10b981', backgroundColor: 'transparent', tension: 0.15 }, { label: 'Reale Kaufkraft (nach Inflation)', data: realData, borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [4, 4], tension: 0.15 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { labels: { font: { size: 10 } } } }, scales: { x: { ticks: { font: { size: 9 } } }, y: { ticks: { font: { size: 9 } } } } } }); }
       }
 
+// Hilfsfunktion: Zwingt alle aktiven Chart.js-Instanzen, ihre Größe neu zu berechnen
+function resizeAllCharts() {
+    Object.keys(charts).forEach(key => {
+        if (charts[key]) {
+            charts[key].resize();
+        }
+    });
+}
+    
       function initCharts() { 
           const ctxCf = document.getElementById('chartCashflow'); 
           const ctxExSt = document.getElementById('chartExpenseStructure'); 
@@ -2879,6 +2893,16 @@ if ('serviceWorker' in navigator) {
       .catch((err) => console.error('Service Worker Registrierung fehlgeschlagen:', err));
   });
 }
+
+// Reagiert darauf, wenn die PWA auf dem Smartphone aus dem Hintergrund geöffnet wird
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+            resizeAllCharts();
+        }, 100);
+    }
+});
+    
   </script>
 </body>
 </html>
