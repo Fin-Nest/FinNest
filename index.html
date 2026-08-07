@@ -278,7 +278,7 @@
                   </div>
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break bg-indigo-50/50">
                       <div class="flex justify-between items-center text-indigo-500 mb-2">
-                          <span class="text-sm font-bold" id="kpi-assets-label">Nettovermögen (Net Worth)</span>
+                          <span class="text-sm font-bold" id="kpi-assets-label">Nettovermögen (Gesamt)</span>
                           <i data-lucide="landmark" class="w-5 h-5"></i>
                       </div>
                       <span id="kpi-assets" class="text-2xl font-bold text-indigo-900">0,00 €</span>
@@ -287,7 +287,7 @@
 
               <!-- SPLIT TABLE -->
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
-                  <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Gezielte Eigentums- & Verantworter-Struktur</h3>
+                  <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Finanzübersicht</h3>
                   <div class="overflow-x-auto">
                       <table class="w-full text-left text-sm border-collapse min-w-[500px]">
                           <thead>
@@ -343,13 +343,13 @@
                       </div>
                   </div>
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Detaillierte Kostenstruktur (Monat)</h3>
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Kostenübersicht (Monat)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
                           <canvas id="chartExpenseStructure"></canvas>
                       </div>
                   </div>
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Struktur Brutto-Vermögen</h3>
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Vermögensübersicht</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
                           <canvas id="chartAssetAllocation"></canvas>
                       </div>
@@ -365,7 +365,7 @@
 
                   <!-- Realisierter Gewinn / Verlust Widget -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[320px] avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Gewinn / Verlust (Laufzeit)</h3>
+                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Wertpapier-Gewinn / Verlust (Laufzeit)</h3>
                       <div id="realized-gains-widget-container" class="flex-1 flex flex-col justify-between space-y-3">
                           <!-- Dynamisch befüllt via JS -->
                       </div>
@@ -393,7 +393,7 @@
           <div id="tab-income" class="hidden space-y-8">
               <div>
                   <h2 class="text-2xl font-bold tracking-tight">Einnahmen-Verwaltung</h2>
-                  <p class="text-slate-500">Erfasse Netto-Bezüge sowie feingliedrige Kapitalerträge.</p>
+                  <p class="text-slate-500">Erfasse alle Einnahmen und Kapitalerträge.</p>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -469,7 +469,7 @@
               <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
                       <h2 class="text-2xl font-bold tracking-tight">Ausgaben-Verwaltung</h2>
-                      <p class="text-slate-500">Aufschlüsselung der Kosten inklusive präziser Zuordnung der Verantwortlichkeiten.</p>
+                      <p class="text-slate-500">Aufschlüsselung der Kosten.</p>
                   </div>
                   <button onclick="exportExpensesCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all shadow-sm">
                       <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
@@ -764,7 +764,7 @@
               <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8 projection-container avoid-break">
                   <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
                       <h3 class="text-lg font-bold tracking-tight text-slate-800 flex items-center gap-2">
-                          <i data-lucide="line-chart" class="text-indigo-600"></i> Segmentierte Vermögensprojektion (Assets) & Kaufkraft
+                          <i data-lucide="line-chart" class="text-indigo-600"></i> Prognose Vermögensentwicklung
                       </h3>
                   </div>
                   <div class="grid grid-cols-1 lg:grid-cols-12 projection-grid">
