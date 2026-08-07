@@ -1,13 +1,13 @@
-const CACHE_NAME = 'finnest-v1';
+const CACHE_NAME = 'finnest-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0',
-  'https://unpkg.com/lucide@latest',
-  'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.min.js'
+  './lib/tailwind.min.js',
+  './lib/chart.min.js',
+  './lib/chartjs-plugin-datalabels.min.js',
+  './lib/lucide.min.js',
+  './lib/crypto-js.min.js'
 ];
 
 // Installation: Dateien in den Cache laden
@@ -20,7 +20,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Aktivierung: Alte Caches aufräumen
+// Aktivierung: Alte Caches löschen (z. B. v1)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -36,7 +36,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Anfragen zuerst aus dem Cache bedienen, falls offline
+// Fetch: Anfragen zuerst aus dem Cache bedienen (Offline-First)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
