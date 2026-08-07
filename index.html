@@ -2828,6 +2828,14 @@
               setTimeout(() => { allTabs.forEach(tab => { if (tab !== activeTab && tab.dataset.wasHidden === 'false' && tab.id !== 'lock-screen') { tab.classList.remove('hidden'); } }); document.title = originalDocTitle; btnElement.innerHTML = originalText; lucide.createIcons(); }, 500);
           }, 100);
       }
+    // Registrierung des Service Workers für PWA-Funktionalität
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => console.log('Service Worker erfolgreich registriert:', reg.scope))
+      .catch((err) => console.error('Service Worker Registrierung fehlgeschlagen:', err));
+  });
+}
   </script>
 </body>
 </html>
