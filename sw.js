@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finnest-v2';
+const CACHE_NAME = 'finnest-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,7 +7,10 @@ const ASSETS_TO_CACHE = [
   './lib/chart.min.js',
   './lib/chartjs-plugin-datalabels.min.js',
   './lib/lucide.min.js',
-  './lib/crypto-js.min.js'
+  './lib/crypto-js.min.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png'
 ];
 
 // Installation: Dateien in den Cache laden
