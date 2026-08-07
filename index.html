@@ -180,7 +180,7 @@
               <div class="p-1.5 bg-indigo-600 rounded-lg text-white">
                   <i data-lucide="wallet" class="w-5 h-5"></i>
               </div>
-              <span class="font-semibold text-slate-800">FamFinanz Pro</span>
+              <span class="font-semibold text-slate-800">FinNest</span>
           </div>
           <button onclick="toggleMobileSidebar()" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg focus:outline-none">
               <i data-lucide="menu" class="w-6 h-6"></i>
@@ -197,7 +197,7 @@
                   <div class="p-2 bg-indigo-600 rounded-xl text-white">
                       <i data-lucide="wallet" class="w-6 h-6"></i>
                   </div>
-                  <span class="text-xl font-semibold tracking-tight">FamFinanz Pro</span>
+                  <span class="text-xl font-semibold tracking-tight">FinNest</span>
               </div>
               
               <nav class="space-y-1">
@@ -1711,7 +1711,7 @@
               ];
               csvContent += row.join(";") + "\n";
           });
-          downloadCSV(csvContent, "famfinanz_depot_export.csv");
+          downloadCSV(csvContent, "finnest_depot_export.csv");
       }
 
       // PUNKT 2: CSV Export für Wertpapierhistorie
@@ -1725,7 +1725,7 @@
               ];
               csvContent += row.join(";") + "\n";
           });
-          downloadCSV(csvContent, "famfinanz_wertpapierhistorie_export.csv");
+          downloadCSV(csvContent, "finnest_wertpapierhistorie_export.csv");
       }
 
       // PUNKT 4: CSV Export für Reiter Ausgaben
@@ -1739,7 +1739,7 @@
           state.carExpenses.forEach(i => csvContent += `"Auto";"${i.type||''}";"${i.desc||''}";"${getOwnerNameByCode(i.owner)}";"${i.value||0}"\n`.replace('.', ','));
           state.leisureExpenses.forEach(i => csvContent += `"Freizeit";"${i.type||''}";"${i.desc||''}";"${getOwnerNameByCode(i.owner)}";"${i.value||0}"\n`.replace('.', ','));
 
-          downloadCSV(csvContent, "famfinanz_ausgaben_export.csv");
+          downloadCSV(csvContent, "finnest_ausgaben_export.csv");
       }
 
       // PUNKT 5: CSV Export für Gehaltsentwicklung
@@ -1756,7 +1756,7 @@
                   csvContent += row.join(";") + "\n";
               });
           });
-          downloadCSV(csvContent, "famfinanz_gehaltshistorie_export.csv");
+          downloadCSV(csvContent, "finnest_gehaltshistorie_export.csv");
       }
 
       function exportChildrenCSV() {
@@ -1766,7 +1766,7 @@
               let row = [ `"${e.date||''}"`, `"${childName}"`, `"${e.category||''}"`, `"${e.desc||''}"`, `"${e.amount||0}"`.replace('.', ',') ];
               csvContent += row.join(";") + "\n";
           });
-          downloadCSV(csvContent, "famfinanz_kinder_export.csv");
+          downloadCSV(csvContent, "finnest_kinder_export.csv");
       }
 
       function downloadCSV(csvContent, fileName) {
@@ -2821,7 +2821,7 @@
               const allTabs = document.querySelectorAll('main > div');
               allTabs.forEach(tab => { if (tab !== activeTab && tab.id !== 'lock-screen') { tab.dataset.wasHidden = tab.classList.contains('hidden') ? 'true' : 'false'; tab.classList.add('hidden'); } });
               const tabTitleElement = activeTab.querySelector('h1, h2'); const tabTitleText = tabTitleElement ? tabTitleElement.innerText : "Finanzbericht";
-              const originalDocTitle = document.title; document.title = `FamFinanz_${tabTitleText.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}`;
+              const originalDocTitle = document.title; document.title = `FinNest_${tabTitleText.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}`;
               window.print();
               setTimeout(() => { allTabs.forEach(tab => { if (tab !== activeTab && tab.dataset.wasHidden === 'false' && tab.id !== 'lock-screen') { tab.classList.remove('hidden'); } }); document.title = originalDocTitle; btnElement.innerHTML = originalText; lucide.createIcons(); }, 500);
           }, 100);
