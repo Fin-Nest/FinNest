@@ -1389,29 +1389,70 @@
           if(el) { el.innerText = `(M: ${formatEuroDisplay(valH)} € | F: ${formatEuroDisplay(valW)} € | G: ${formatEuroDisplay(valB)} €)`; }
       }
 
-      window.addEventListener('DOMContentLoaded', () => {
-          const v11Data = localStorage.getItem('famfinanz_v11_state');
-          if (v11Data) {
-              if (v11Data.startsWith('U2Fsd')) { document.getElementById('lock-screen').classList.remove('hidden'); } 
-              else { parseAndLoadState(v11Data); document.getElementById('app-wrapper').classList.remove('hidden'); }
-          } else {
-              parseAndLoadState(null); document.getElementById('app-wrapper').classList.remove('hidden');
-          }
-          updateEncryptionUI();
-          lucide.createIcons();
-      });
+     window.addEventListener('DOMContentLoaded', () => {
+    const v11Data = localStorage.getItem('famfinanz_v11_state');
+    if (v11Data) {
+        if (v11Data.startsWith('U2Fsd')) { 
+            document.getElementById('lock-screen').classList.remove('hidden'); 
+        } else { 
+            parseAndLoadState(v11Data); 
+            document.getElementById('app-wrapper').classList.remove('hidden'); 
+            
+            // KORREKTUR: Expliziter Aufruf der Charts, sobald der Wrapper sichtbar ist!
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    initCharts();
+                    renderSalaryChart();
+                }, 50);
+            });
+        }
+    } else {
+        parseAndLoadState(null); 
+        document.getElementById('app-wrapper').classList.remove('hidden');
+
+        // KORREKTUR: Auch beim ersten Start ohne Daten die Charts verzögert rendern
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                initCharts();
+                renderSalaryChart();
+            }, 50);
+        });
+    }
+    updateEncryptionUI();
+    lucide.createIcons();
+});
 
       function unlockApp() {
-          const pwdInput = document.getElementById('unlock-pwd').value; const encryptedData = localStorage.getItem('famfinanz_v11_state'); const errorMsg = document.getElementById('unlock-error');
-          if(!encryptedData) return;
-          try {
-              const bytes = CryptoJS.AES.decrypt(encryptedData, pwdInput); const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
-              if (!decryptedStr || decryptedStr.length === 0) throw new Error("Entschlüsselung fehlgeschlagen.");
-              window.appPassword = pwdInput; errorMsg.classList.add('hidden'); document.getElementById('lock-screen').classList.add('hidden'); document.getElementById('app-wrapper').classList.remove('hidden');
-              parseAndLoadState(decryptedStr); updateEncryptionUI();
-              setTimeout(() => { initCharts(); initWealthProjectionChart(); renderSalaryChart(); }, 100);
-          } catch (error) { errorMsg.classList.remove('hidden'); }
-      }
+    const pwdInput = document.getElementById('unlock-pwd').value; 
+    const encryptedData = localStorage.getItem('famfinanz_v11_state'); 
+    const errorMsg = document.getElementById('unlock-error');
+    if(!encryptedData) return;
+    
+    try {
+        const bytes = CryptoJS.AES.decrypt(encryptedData, pwdInput); 
+        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decryptedStr || decryptedStr.length === 0) throw new Error("Entschlüsselung fehlgeschlagen.");
+        
+        window.appPassword = pwdInput; 
+        errorMsg.classList.add('hidden'); 
+        document.getElementById('lock-screen').classList.add('hidden'); 
+        document.getElementById('app-wrapper').classList.remove('hidden');
+        
+        parseAndLoadState(decryptedStr); 
+        updateEncryptionUI();
+        
+        // KORREKTUR: Kurze Pause, damit das DOM 'app-wrapper' rendern kann
+        requestAnimationFrame(() => {
+            setTimeout(() => { 
+                initCharts(); 
+                initWealthProjectionChart(); 
+                renderSalaryChart(); 
+            }, 100);
+        });
+    } catch (error) { 
+        errorMsg.classList.remove('hidden'); 
+    }
+}
 
       // PUNKT 6: PASSWORT ZURÜCKSETZEN VIA SICHERHEITSFRAGE
       function showResetPasswordModal() {
