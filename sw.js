@@ -1,16 +1,15 @@
 const CACHE_NAME = 'finnest-v3';
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './lib/tailwind.min.js',
-  './lib/chart.min.js',
-  './lib/chartjs-plugin-datalabels.min.js',
-  './lib/lucide.min.js',
-  './lib/crypto-js.min.js',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  'index.html',
+  'manifest.json',
+  'lib/tailwind.min.js',
+  'lib/chart.min.js',
+  'lib/chartjs-plugin-datalabels.min.js',
+  'lib/lucide.min.js',
+  'lib/crypto-js.min.js',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/apple-touch-icon.png'
 ];
 
 // Installation: Dateien in den Cache laden
@@ -23,7 +22,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Aktivierung: Alte Caches löschen (z. B. v1)
+// Aktivierung: Alte Caches löschen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,7 +38,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Anfragen zuerst aus dem Cache bedienen (Offline-First)
+// Fetch: Offline-First mit Fallback
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
