@@ -9,20 +9,19 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FinNest">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#0f172a">
 
-  <!-- Dynamisches Web-App Manifest -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"FinNest","short_name":"FinNest","start_url":".","display":"standalone","background_color":"%23f8fafc","theme_color":"%234f46e5"}'>
-  
-  <!-- External CDN Dependencies -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
-  
+  <!-- Verlinkung auf deine lokale manifest.json -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Lokale Bibliotheken aus deinem lib/-Ordner (100% Offline-fähig) -->
+  <script src="lib/tailwind.min.js"></script>
+  <script src="lib/lucide.min.js"></script>
+  <script src="lib/chart.min.js"></script>
+  <script src="lib/chartjs-plugin-datalabels.min.js"></script>
+  <script src="lib/crypto-js.min.js"></script>
+
+  <!-- Deine spezifischen In-App CSS-Styles (vollständig erhalten) -->
   <style>
       body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
