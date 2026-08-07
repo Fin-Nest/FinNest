@@ -1,5 +1,7 @@
-const CACHE_NAME = 'finnest-v3';
+// sw.js (Optimierte Version)
+const CACHE_NAME = 'finnest-v4';
 const ASSETS_TO_CACHE = [
+  './',
   'index.html',
   'manifest.json',
   'lib/tailwind.min.js',
@@ -12,17 +14,21 @@ const ASSETS_TO_CACHE = [
   'icons/apple-touch-icon.png'
 ];
 
-// Installation: Dateien in den Cache laden
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of ASSETS_TO_CACHE) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn(`[SW] Einzelne Datei konnte nicht gecacht werden: ${asset}`, err);
+        }
+      }
     })
   );
   self.skipWaiting();
 });
 
-// Aktivierung: Alte Caches löschen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -38,7 +44,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Offline-First mit Fallback
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
