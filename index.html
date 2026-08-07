@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
@@ -74,7 +74,7 @@
       <option value="Sonstiges"></option>
   </datalist>
 
-  <!-- LOCK SCREEN (TRESOR) -->
+  <!-- LOCK SCREEN (TRESOR MIT RESET-FUNKTION) -->
   <div id="lock-screen" class="hidden fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-4">
       <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
           <div class="mx-auto w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
@@ -83,12 +83,36 @@
           <h2 class="text-2xl font-bold text-slate-800 mb-2">Tresor gesperrt</h2>
           <p class="text-slate-500 text-sm mb-6">Bitte gib dein Masterpasswort ein, um deine lokalen Finanzdaten zu entschlüsseln.</p>
           
-          <input type="password" id="unlock-pwd" placeholder="Masterpasswort" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-indigo-600 mb-2 text-center text-lg tracking-widest" onkeypress="if(event.key === 'Enter') unlockApp()">
-          <p id="unlock-error" class="text-rose-500 text-xs font-medium h-4 mb-4 hidden">Passwort inkorrekt oder Daten korrupt.</p>
-          
-          <button onclick="unlockApp()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-sm">
-              Entschlüsseln & Öffnen
-          </button>
+          <div id="pwd-standard-form" class="space-y-3">
+              <input type="password" id="unlock-pwd" placeholder="Masterpasswort" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-indigo-600 text-center text-lg tracking-widest" onkeypress="if(event.key === 'Enter') unlockApp()">
+              <p id="unlock-error" class="text-rose-500 text-xs font-medium h-4 hidden">Passwort inkorrekt oder Daten korrupt.</p>
+              
+              <button onclick="unlockApp()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-sm">
+                  Entschlüsseln & Öffnen
+              </button>
+              
+              <div class="pt-2">
+                  <button onclick="showResetPasswordModal()" class="text-xs text-indigo-600 hover:underline font-medium">Passwort vergessen?</button>
+              </div>
+          </div>
+
+          <!-- FORGOT PASSWORD FORM -->
+          <div id="pwd-reset-form" class="hidden space-y-3 text-left">
+              <p id="reset-question-display" class="text-xs font-semibold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200">Sicherheitsfrage: Lade...</p>
+              <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">Deine Antwort</label>
+                  <input type="text" id="reset-answer-input" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-indigo-600">
+              </div>
+              <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">Neues Masterpasswort</label>
+                  <input type="password" id="reset-new-pwd" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-indigo-600">
+              </div>
+              <p id="reset-error" class="text-rose-500 text-xs font-medium hidden"></p>
+              <div class="flex gap-2 pt-1">
+                  <button onclick="hideResetPasswordModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl">Abbrechen</button>
+                  <button onclick="confirmPasswordReset()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl">Zurücksetzen</button>
+              </div>
+          </div>
       </div>
   </div>
 
@@ -331,7 +355,7 @@
                       </div>
                   </div>
                   
-                  <!-- PUNKT 1: Gestapeltes Depot-Diagramm nach Wertpapieren -->
+                  <!-- PUNKT 1: Gestapeltes Depot-Diagramm (Sortiert: Größter Wert unten) -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
                       <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depotwert nach Personen (Aufschlüsselung & Gewichtung)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
@@ -339,7 +363,7 @@
                       </div>
                   </div>
 
-                  <!-- PUNKT 3: Top 3 Gewinne & Verluste Widget -->
+                  <!-- Realisierter Gewinn / Verlust Widget -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[320px] avoid-break">
                       <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Gewinn / Verlust (Laufzeit)</h3>
                       <div id="realized-gains-widget-container" class="flex-1 flex flex-col justify-between space-y-3">
@@ -347,7 +371,7 @@
                       </div>
                   </div>
 
-                  <!-- PUNKT 2: Kachel mit klarer Beschriftung & Fallback -->
+                  <!-- PUNKT 3: Gesamtausgaben Kinder als Stacked Bar Chart -->
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
                       <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Gesamtausgaben Kinder (<span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span>)</h3>
                       <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
@@ -440,11 +464,16 @@
               </div>
           </div>
 
-          <!-- TAB: AUSGABEN -->
+          <!-- TAB: AUSGABEN (PUNKT 4: CSV Export) -->
           <div id="tab-expenses" class="hidden space-y-8">
-              <div>
-                  <h2 class="text-2xl font-bold tracking-tight">Ausgaben-Verwaltung</h2>
-                  <p class="text-slate-500">Aufschlüsselung der Kosten inklusive präziser Zuordnung der Verantwortlichkeiten.</p>
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                      <h2 class="text-2xl font-bold tracking-tight">Ausgaben-Verwaltung</h2>
+                      <p class="text-slate-500">Aufschlüsselung der Kosten inklusive präziser Zuordnung der Verantwortlichkeiten.</p>
+                  </div>
+                  <button onclick="exportExpensesCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all shadow-sm">
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
+                  </button>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -687,7 +716,7 @@
                   </div>
               </div>
 
-              <!-- PUNKT 4: WERTPAPIER-DEPOT (Inkl. voll funktionialer Sortierköpfe) -->
+              <!-- WERTPAPIER-DEPOT -->
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
                   <div class="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-2">
                       <div class="flex flex-col">
@@ -767,11 +796,16 @@
               </div>
           </div>
 
-          <!-- TAB: WERTPAPIERHISTORIE (PUNKT 5: Inkl. Sortierköpfe) -->
+          <!-- TAB: WERTPAPIERHISTORIE (PUNKT 2: Inkl. CSV Export & Sortierung) -->
           <div id="tab-depotHistory" class="hidden space-y-8">
-              <div>
-                  <h2 class="text-2xl font-bold tracking-tight">Wertpapierhistorie (Realisierte Verkäufe)</h2>
-                  <p class="text-slate-500">Übersicht aller veräußerten Aktien & ETFs mit detaillierter Ertrags- und Steueraufschlüsselung.</p>
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                      <h2 class="text-2xl font-bold tracking-tight">Wertpapierhistorie (Realisierte Verkäufe)</h2>
+                      <p class="text-slate-500">Übersicht aller veräußerten Aktien & ETFs mit detaillierter Ertrags- und Steueraufschlüsselung.</p>
+                  </div>
+                  <button onclick="exportDepotHistoryCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all shadow-sm">
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
+                  </button>
               </div>
 
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -803,11 +837,16 @@
               </div>
           </div>
 
-          <!-- TAB: GEHALTSENTWICKLUNG -->
+          <!-- TAB: GEHALTSENTWICKLUNG (PUNKT 5: Inkl. CSV Export) -->
           <div id="tab-salary" class="hidden space-y-8">
-              <div>
-                  <h2 class="text-2xl font-bold tracking-tight">Historische Gehaltsentwicklung</h2>
-                  <p class="text-slate-500">Erfasse Brutto-Gehälter und deren Bestandteile im Zeitverlauf für die Dashboard-Analyse.</p>
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                      <h2 class="text-2xl font-bold tracking-tight">Historische Gehaltsentwicklung</h2>
+                      <p class="text-slate-500">Erfasse Brutto-Gehälter und deren Bestandteile im Zeitverlauf für die Dashboard-Analyse.</p>
+                  </div>
+                  <button onclick="exportSalaryCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all shadow-sm">
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
+                  </button>
               </div>
 
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -1135,7 +1174,7 @@
               </div>
           </div>
 
-          <!-- TAB: PERSONALISIERUNG -->
+          <!-- TAB: PERSONALISIERUNG (PUNKT 6: Inkl. Sicherheitsfrage) -->
           <div id="tab-settings" class="hidden space-y-8">
               <div>
                   <h2 class="text-2xl font-bold tracking-tight">Profil- & App-Personalisierung</h2>
@@ -1177,16 +1216,16 @@
                           <label class="block text-xs font-medium text-slate-500 mb-1">Twelve Data API-Key</label>
                           <input type="text" id="set-twelvedata-key" oninput="handleApiKeyChange()" placeholder="z. B. 8a9b7c6d5e4f3a2b..." class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-mono text-sm">
                       </div>
-                      <p class="text-[11px] text-slate-400"><strong>Tipp für Ticker-Eingaben:</strong> US-Aktien direkt eintragen (z. B. <code>AAPL</code>, <code>MSFT</code>). Deutsche Werte mit Börsenplatz-Endung eintragen (z. B. <code>BMW.DEX</code> für Xetra oder <code>BMW</code>).</p>
                   </div>
               </div>
 
+              <!-- PUNKT 6: LOKALE VERSCHLÜSSELUNG MIT SICHERHEITSFRAGE -->
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl space-y-4 avoid-break mt-8">
                   <div class="flex justify-between items-center">
-                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-600"></i> Lokale Verschlüsselung (AES-256)</h3>
+                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="shield-check" class="text-emerald-600"></i> Lokale Verschlüsselung & Sicherheitsfrage</h3>
                       <span id="enc-status-badge" class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">Inaktiv</span>
                   </div>
-                  <p class="text-xs text-slate-500">Sichere dein Vermögens-Cockpit mit einem Masterpasswort. Die Daten werden verschlüsselt im Browser (LocalStorage) abgelegt.</p>
+                  <p class="text-xs text-slate-500">Sichere dein Vermögens-Cockpit mit einem Masterpasswort. Richte optional eine Sicherheitsfrage ein, um das Passwort bei Verlust zurückzusetzen.</p>
                   
                   <div id="setup-pwd-area" class="space-y-3 pt-2">
                       <div>
@@ -1197,8 +1236,21 @@
                           <label class="block text-xs font-medium text-slate-500 mb-1">Passwort wiederholen</label>
                           <input type="password" id="set-pwd-2" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
                       </div>
-                      <div class="flex gap-2 pt-1">
-                          <button onclick="setMasterPassword()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl transition-all text-sm">Passwort setzen</button>
+
+                      <div class="border-t border-slate-100 pt-3 space-y-3">
+                          <span class="text-xs font-bold text-slate-700 block">Sicherheitsfrage (zum Zurücksetzen)</span>
+                          <div>
+                              <label class="block text-[11px] font-medium text-slate-500 mb-1">Eigene Sicherheitsfrage</label>
+                              <input type="text" id="set-sec-question" placeholder="z. B. Wie hieß mein erstes Haustier?" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                          </div>
+                          <div>
+                              <label class="block text-[11px] font-medium text-slate-500 mb-1">Antwort auf die Frage</label>
+                              <input type="text" id="set-sec-answer" placeholder="Deine Geheimantwort" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-indigo-600 font-medium text-sm">
+                          </div>
+                      </div>
+
+                      <div class="flex gap-2 pt-2">
+                          <button onclick="setMasterPassword()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl transition-all text-sm">Passwort & Frage speichern</button>
                           <button onclick="removeMasterPassword()" id="btn-remove-pwd" class="hidden py-2 px-4 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium rounded-xl transition-all text-sm tooltip" title="Verschlüsselung entfernen"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                       </div>
                       <p id="pwd-msg" class="text-xs font-medium mt-1"></p>
@@ -1220,10 +1272,8 @@
           formatter: function(value) { return value > 0 ? formatEuroDisplay(value) + ' €' : ''; }
       });
 
-      // PALETTE FÜR DIE DEPOAUFTEILUNG
       const PALETTE = ['#4f46e5', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#64748b', '#3b82f6'];
 
-      // TABLE CONFIGURATIONS
       const TABLE_CONFIGS = {
           realestate: {
               path: ['assets', 'realestate'], tbodyId: 'realestate-table-body',
@@ -1279,7 +1329,12 @@
       };
 
       let state = {
-          settings: { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", sort: {}, sortDepotHistory: { field: 'sellDate', dir: 'desc' } },
+          settings: { 
+              names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, 
+              applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", 
+              securityQuestion: "", securityAnswerEncrypted: "",
+              sort: {}, sortDepotHistory: { field: 'sellDate', dir: 'desc' } 
+          },
           income: { husbandAnnual: 0, wifeAnnual: 0, kindergeldAnnual: 0, elterngeldHusbandAnnual: 0, elterngeldWifeAnnual: 0, otherAnnual: 0 },
           capitalGains: [], expenses: { rent: 0, rentOwner: "both", household: 0, householdOwner: "both" },
           investments: [], insurances: [], carExpenses: [], leisureExpenses: [],
@@ -1354,10 +1409,81 @@
           } catch (error) { errorMsg.classList.remove('hidden'); }
       }
 
+      // PUNKT 6: PASSWORT ZURÜCKSETZEN VIA SICHERHEITSFRAGE
+      function showResetPasswordModal() {
+          const secQuestion = localStorage.getItem('famfinanz_sec_question');
+          if (!secQuestion) {
+              alert("Für dieses Depot wurde noch keine Sicherheitsfrage eingerichtet. Bitte verwende dein ursprüngliches Masterpasswort.");
+              return;
+          }
+          document.getElementById('reset-question-display').innerText = `Sicherheitsfrage: ${secQuestion}`;
+          document.getElementById('pwd-standard-form').classList.add('hidden');
+          document.getElementById('pwd-reset-form').classList.remove('hidden');
+      }
+
+      function hideResetPasswordModal() {
+          document.getElementById('pwd-reset-form').classList.add('hidden');
+          document.getElementById('pwd-standard-form').classList.remove('hidden');
+      }
+
+      function confirmPasswordReset() {
+          const answerInput = document.getElementById('reset-answer-input').value.trim().toLowerCase();
+          const newPwd = document.getElementById('reset-new-pwd').value;
+          const errorEl = document.getElementById('reset-error');
+
+          if (!answerInput || !newPwd) {
+              errorEl.innerText = "Bitte alle Felder ausfüllen.";
+              errorEl.classList.remove('hidden');
+              return;
+          }
+
+          const encRecoveryKey = localStorage.getItem('famfinanz_sec_recovery');
+          if (!encRecoveryKey) {
+              errorEl.innerText = "Keine Wiederherstellungsdaten vorhanden.";
+              errorEl.classList.remove('hidden');
+              return;
+          }
+
+          try {
+              const bytes = CryptoJS.AES.decrypt(encRecoveryKey, answerInput);
+              const oldMasterPwd = bytes.toString(CryptoJS.enc.Utf8);
+
+              if (!oldMasterPwd || oldMasterPwd.length === 0) {
+                  throw new Error("Antwort falsch");
+              }
+
+              const encryptedState = localStorage.getItem('famfinanz_v11_state');
+              const stateBytes = CryptoJS.AES.decrypt(encryptedState, oldMasterPwd);
+              const rawStateJson = stateBytes.toString(CryptoJS.enc.Utf8);
+
+              if (!rawStateJson) throw new Error("Fehler beim Dekodieren der Finanzdaten.");
+
+              window.appPassword = newPwd;
+              const newEncryptedState = CryptoJS.AES.encrypt(rawStateJson, newPwd).toString();
+              localStorage.setItem('famfinanz_v11_state', newEncryptedState);
+
+              const newEncryptedRecovery = CryptoJS.AES.encrypt(newPwd, answerInput).toString();
+              localStorage.setItem('famfinanz_sec_recovery', newEncryptedRecovery);
+
+              alert("Dein Masterpasswort wurde erfolgreich zurückgesetzt! Der Tresor wird geöffnet.");
+              hideResetPasswordModal();
+              document.getElementById('lock-screen').classList.add('hidden');
+              document.getElementById('app-wrapper').classList.remove('hidden');
+
+              parseAndLoadState(rawStateJson);
+              updateEncryptionUI();
+              setTimeout(() => { initCharts(); initWealthProjectionChart(); renderSalaryChart(); }, 100);
+
+          } catch (err) {
+              errorEl.innerText = "Antwort auf die Sicherheitsfrage ist inkorrekt.";
+              errorEl.classList.remove('hidden');
+          }
+      }
+
       function parseAndLoadState(jsonStr) {
           if (jsonStr) { try { state = JSON.parse(jsonStr); } catch(e) { console.error("JSON Parsing Error", e); } }
           
-          if (!state.settings) state.settings = { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", sort: {}, sortDepotHistory: { field: 'sellDate', dir: 'desc' } };
+          if (!state.settings) state.settings = { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", securityQuestion: "", securityAnswerEncrypted: "", sort: {}, sortDepotHistory: { field: 'sellDate', dir: 'desc' } };
           if (typeof state.settings.applyCapitalGainsTax === 'undefined') state.settings.applyCapitalGainsTax = false;
           if (typeof state.settings.includeImmoInEK === 'undefined') state.settings.includeImmoInEK = false;
           if (typeof state.settings.twelveDataApiKey === 'undefined') state.settings.twelveDataApiKey = "";
@@ -1397,16 +1523,31 @@
 
       function setMasterPassword() {
           const p1 = document.getElementById('set-pwd-1').value; const p2 = document.getElementById('set-pwd-2').value; const msg = document.getElementById('pwd-msg');
-          if(!p1 || !p2) { msg.textContent = "Bitte beide Felder ausfüllen."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
+          const secQ = document.getElementById('set-sec-question').value.trim();
+          const secA = document.getElementById('set-sec-answer').value.trim().toLowerCase();
+
+          if(!p1 || !p2) { msg.textContent = "Bitte beide Passwortfelder ausfüllen."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
           if(p1 !== p2) { msg.textContent = "Passwörter stimmen nicht überein."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
+
           window.appPassword = p1; saveToLocalStorage();
+
+          if (secQ && secA) {
+              localStorage.setItem('famfinanz_sec_question', secQ);
+              const encRecovery = CryptoJS.AES.encrypt(p1, secA).toString();
+              localStorage.setItem('famfinanz_sec_recovery', encRecovery);
+          }
+
           document.getElementById('set-pwd-1').value = ''; document.getElementById('set-pwd-2').value = '';
-          msg.textContent = "Tresor erfolgreich verschlüsselt."; msg.className = "text-xs font-medium mt-1 text-emerald-600"; updateEncryptionUI();
+          msg.textContent = "Masterpasswort & Sicherheitsfrage erfolgreich hinterlegt."; msg.className = "text-xs font-medium mt-1 text-emerald-600"; updateEncryptionUI();
       }
 
       function removeMasterPassword() {
           if(confirm("Bist du sicher? Deine Daten werden unverschlüsselt im Browser abgelegt.")) {
-              window.appPassword = null; saveToLocalStorage(); const msg = document.getElementById('pwd-msg');
+              window.appPassword = null; 
+              localStorage.removeItem('famfinanz_sec_question');
+              localStorage.removeItem('famfinanz_sec_recovery');
+              saveToLocalStorage(); 
+              const msg = document.getElementById('pwd-msg');
               msg.textContent = "Verschlüsselung aufgehoben."; msg.className = "text-xs font-medium mt-1 text-slate-500"; updateEncryptionUI();
           }
       }
@@ -1504,6 +1645,11 @@
           document.getElementById('set-tax-cg').checked = state.settings.applyCapitalGainsTax;
           if(document.getElementById('immo-ek-toggle')) document.getElementById('immo-ek-toggle').checked = state.settings.includeImmoInEK;
           if(document.getElementById('set-twelvedata-key')) document.getElementById('set-twelvedata-key').value = state.settings.twelveDataApiKey || "";
+          
+          const savedQuestion = localStorage.getItem('famfinanz_sec_question');
+          if (savedQuestion && document.getElementById('set-sec-question')) {
+              document.getElementById('set-sec-question').value = savedQuestion;
+          }
 
           document.getElementById('inc-husband-annual').value = formatEuroDisplay(state.income.husbandAnnual); document.getElementById('inc-wife-annual').value = formatEuroDisplay(state.income.wifeAnnual);
           document.getElementById('inc-kindergeld').value = formatEuroDisplay(state.income.kindergeldAnnual);
@@ -1554,6 +1700,7 @@
           reader.readAsText(file);
       }
 
+      // EXPORT-FUNKTIONEN DOKUMENTIERT & VOLLSTÄNDIG
       function exportDepotCSV() {
           let csvContent = "data:text/csv;charset=utf-8,Typ;Bezeichnung;ISIN_WKN;Bank/Broker;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Akt. Kurs;Gesamtwert\n";
           state.depot.forEach(item => {
@@ -1564,9 +1711,52 @@
               ];
               csvContent += row.join(";") + "\n";
           });
-          const encodedUri = encodeURI(csvContent); const link = document.createElement("a");
-          link.setAttribute("href", encodedUri); link.setAttribute("download", "famfinanz_depot_export.csv");
-          document.body.appendChild(link); link.click(); link.remove();
+          downloadCSV(csvContent, "famfinanz_depot_export.csv");
+      }
+
+      // PUNKT 2: CSV Export für Wertpapierhistorie
+      function exportDepotHistoryCSV() {
+          let csvContent = "data:text/csv;charset=utf-8,Verkaufsdatum;Typ;Bezeichnung;ISIN_WKN;Bank;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Verkaufskurs;Gebuehren;Steuer;Netto_Gewinn_Verlust\n";
+          state.depotHistory.forEach(item => {
+              let row = [
+                  `"${item.sellDate||''}"`, `"${item.type||''}"`, `"${item.name||''}"`, `"${item.isinWkn||''}"`, `"${item.bank||''}"`, `"${item.ticker||''}"`, `"${getOwnerNameByCode(item.owner)}"`,
+                  `"${item.anzahl||0}"`.replace('.', ','), `"${item.kaufpreis||0}"`.replace('.', ','), `"${item.verkaufskurs||0}"`.replace('.', ','),
+                  `"${item.gebuehren||0}"`.replace('.', ','), `"${item.taxPaid||0}"`.replace('.', ','), `"${item.netGain||0}"`.replace('.', ',')
+              ];
+              csvContent += row.join(";") + "\n";
+          });
+          downloadCSV(csvContent, "famfinanz_wertpapierhistorie_export.csv");
+      }
+
+      // PUNKT 4: CSV Export für Reiter Ausgaben
+      function exportExpensesCSV() {
+          let csvContent = "data:text/csv;charset=utf-8,Kategorie;Typ_Beschreibung;Anbieter;Zuordnung;Betrag_Mtl\n";
+          csvContent += `"Wohnen/Haushalt";"Miete/Wohnen";"";"${getOwnerNameByCode(state.expenses.rentOwner)}";"${state.expenses.rent||0}"\n`.replace('.', ',');
+          csvContent += `"Wohnen/Haushalt";"Haushalt & Essen";"";"${getOwnerNameByCode(state.expenses.householdOwner)}";"${state.expenses.household||0}"\n`.replace('.', ',');
+
+          state.investments.forEach(i => csvContent += `"Vorsorge";"${i.name||''}";"${i.type||''}";"${getOwnerNameByCode(i.owner)}";"${i.value||0}"\n`.replace('.', ','));
+          state.insurances.forEach(i => csvContent += `"Versicherung";"${i.type||''}";"${i.provider||''}";"${getOwnerNameByCode(i.owner)}";"${i.value||0}"\n`.replace('.', ','));
+          state.carExpenses.forEach(i => csvContent += `"Auto";"${i.type||''}";"${i.desc||''}";"${getOwnerNameByCode(i.owner)}";"${i.value||0}"\n`.replace('.', ','));
+          state.leisureExpenses.forEach(i => csvContent += `"Freizeit";"${i.type||''}";"${i.desc||''}";"${getOwnerNameByCode(i.owner)}";"${i.value||0}"\n`.replace('.', ','));
+
+          downloadCSV(csvContent, "famfinanz_ausgaben_export.csv");
+      }
+
+      // PUNKT 5: CSV Export für Gehaltsentwicklung
+      function exportSalaryCSV() {
+          let csvContent = "data:text/csv;charset=utf-8,Person;Gueltig_Von;Gueltig_Bis;Firma;Bestandteile;Kommentar;Jahresbrutto\n";
+          ['husband', 'wife'].forEach(owner => {
+              const personName = getOwnerNameByCode(owner);
+              state.salaryHistory[owner].forEach(s => {
+                  const total = s.components.reduce((sum, c) => sum + c.value, 0);
+                  const compStr = s.components.map(c => `${c.name}:${c.value}€`).join('|');
+                  let row = [
+                      `"${personName}"`, `"${s.start||''}"`, `"${s.end||'Heute'}"`, `"${s.company||''}"`, `"${compStr}"`, `"${s.comment||''}"`, `"${total}"`.replace('.', ',')
+                  ];
+                  csvContent += row.join(";") + "\n";
+              });
+          });
+          downloadCSV(csvContent, "famfinanz_gehaltshistorie_export.csv");
       }
 
       function exportChildrenCSV() {
@@ -1576,7 +1766,17 @@
               let row = [ `"${e.date||''}"`, `"${childName}"`, `"${e.category||''}"`, `"${e.desc||''}"`, `"${e.amount||0}"`.replace('.', ',') ];
               csvContent += row.join(";") + "\n";
           });
-          const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", "famfinanz_kinder_export.csv"); document.body.appendChild(link); link.click(); link.remove();
+          downloadCSV(csvContent, "famfinanz_kinder_export.csv");
+      }
+
+      function downloadCSV(csvContent, fileName) {
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute("download", fileName);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
       }
 
       function renderSalaryComponents() {
@@ -1650,14 +1850,12 @@
           renderAccountTrackerTable();
       }
       
-      // PUNKT 4: Sortierung für alle Tabellen inklusive Depot
       function sortTable(configKey, field) {
           if (!state.settings.sort) state.settings.sort = {}; let current = state.settings.sort[configKey] || { field: field, dir: 'desc' };
           if (current.field === field) { current.dir = current.dir === 'asc' ? 'desc' : 'asc'; } else { current.field = field; current.dir = 'asc'; }
           state.settings.sort[configKey] = current; saveToLocalStorage(); renderGenericTable(configKey);
       }
 
-      // PUNKT 5: Sortierung für Wertpapierhistorie
       function sortDepotHistoryTable(field) {
           if (!state.settings.sortDepotHistory) state.settings.sortDepotHistory = { field: 'sellDate', dir: 'desc' };
           let current = state.settings.sortDepotHistory;
@@ -1891,7 +2089,6 @@
           alert("Verkauf wurde erfolgreich verbucht.");
       }
 
-      // PUNKT 5: Sortierbare Historien-Tabelle
       function renderDepotHistoryTable() {
           const tbody = document.getElementById('depot-history-table-body');
           const badge = document.getElementById('sum-realized-gains-badge');
@@ -2355,11 +2552,10 @@
 
           state.calculated = { mtlIncome: mtlIncome, mtlExpenses: mtlExpenses };
           renderChildTrackerTables();
-          renderRealizedGainsWidget(); // PUNKT 3: Widget Aktualisierung
+          renderRealizedGainsWidget();
           if(!document.getElementById('app-wrapper').classList.contains('hidden')) { initCharts(); initWealthProjectionChart(); updateThCalculations(); }
       }
 
-      // PUNKT 3: WIDGET REVISION - TOP 3 GEWINNE & VERLUSTE DYNAMISCH RENDERN
       function renderRealizedGainsWidget() {
           const container = document.getElementById('realized-gains-widget-container');
           if (!container) return;
@@ -2501,23 +2697,30 @@
           const tg = state.assets.tagesgeld ? state.assets.tagesgeld.reduce((s,i)=>s+i.value,0) : 0; const fg = state.assets.festgeld ? state.assets.festgeld.reduce((s,i)=>s+i.value,0) : 0; const dp = state.depot.reduce((s,i)=>s+i.value,0); const re = state.assets.realestate ? state.assets.realestate.reduce((s,i)=>s+i.value,0) : 0;
           if(charts.assets) { charts.assets.data.datasets[0].data = [tg, fg, dp, re]; charts.assets.update(); } else { charts.assets = new Chart(ctxAsset, { type: 'pie', data: { labels: ['Tagesgeld', 'Festgeld', 'Depot', 'Immobilien'], datasets: [{ data: [tg, fg, dp, re], backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f59e0b'], borderWidth: 0 }] }, options: standardChartOptions }); }
           
-          // PUNKT 1: STACKED BAR CHART FÜR DEPOTWERTE NACH WERTPAPIEREN & PERSONEN
+          // PUNKT 1: STACKED BAR CHART SORTIERT (Größter Wert ganz unten auf der Achse)
           const names = state.settings.names;
           const ownerKeys = ['husband', 'wife', 'child1', 'child2', 'both'];
           const ownerLabels = [names.husband, names.wife, names.child1, names.child2, 'Gemeinsam'];
 
           const assetMap = {};
+          const assetTotals = {};
+
           state.depot.forEach(item => {
               const name = item.name || 'Unbenannt';
               if (!assetMap[name]) {
                   assetMap[name] = { husband: 0, wife: 0, child1: 0, child2: 0, both: 0 };
+                  assetTotals[name] = 0;
               }
               const ownerKey = ownerKeys.includes(item.owner) ? item.owner : 'both';
-              assetMap[name][ownerKey] += (item.value || 0);
+              const val = item.value || 0;
+              assetMap[name][ownerKey] += val;
+              assetTotals[name] += val;
           });
 
-          const assetNames = Object.keys(assetMap);
-          const datasets = assetNames.map((assetName, idx) => {
+          // Sortieren absteigend nach Gesamtwert -> damit der größte Wert das 1. Dataset (ganz unten im Stapel) wird
+          const sortedAssetNames = Object.keys(assetMap).sort((a, b) => assetTotals[b] - assetTotals[a]);
+
+          const datasets = sortedAssetNames.map((assetName, idx) => {
               const color = PALETTE[idx % PALETTE.length];
               return {
                   label: assetName,
@@ -2553,28 +2756,60 @@
               });
           }
 
-          // PUNKT 2: KINDER-AUSGABEN FALLBACK-BEHANDLUNG
-          const sumChild1 = state.childExpenses.filter(e => e.child === 'child1').reduce((a,b) => a + b.amount, 0); 
-          const sumChild2 = state.childExpenses.filter(e => e.child === 'child2').reduce((a,b) => a + b.amount, 0);
+          // PUNKT 3: GESAMTAUSGABEN KINDER ALS STACKED BAR CHART NACH KATEGORIEN
+          const childCategories = ['Bildung', 'Reisen', 'Sport', 'Hobby', 'Depot'];
+          const childCategoryMap = {};
+          
+          childCategories.forEach(cat => {
+              childCategoryMap[cat] = { child1: 0, child2: 0 };
+          });
 
-          if (sumChild1 === 0 && sumChild2 === 0) {
+          let totalChildExpenses = 0;
+          state.childExpenses.forEach(e => {
+              const cat = childCategories.includes(e.category) ? e.category : 'Hobby';
+              if (e.child === 'child1') childCategoryMap[cat].child1 += e.amount || 0;
+              if (e.child === 'child2') childCategoryMap[cat].child2 += e.amount || 0;
+              totalChildExpenses += e.amount || 0;
+          });
+
+          if (totalChildExpenses === 0) {
               if (emptyMsgChildren) emptyMsgChildren.classList.remove('hidden');
           } else {
               if (emptyMsgChildren) emptyMsgChildren.classList.add('hidden');
           }
 
+          const childDatasets = childCategories.map((cat, idx) => {
+              return {
+                  label: cat,
+                  data: [childCategoryMap[cat].child1, childCategoryMap[cat].child2],
+                  backgroundColor: PALETTE[idx % PALETTE.length],
+                  borderRadius: 4
+              };
+          });
+
           if(charts.children) { 
               charts.children.data.labels = [state.settings.names.child1, state.settings.names.child2]; 
-              charts.children.data.datasets[0].data = [sumChild1, sumChild2]; 
+              charts.children.data.datasets = childDatasets; 
               charts.children.update(); 
           } else { 
               charts.children = new Chart(ctxChildren, { 
-                  type: 'doughnut', 
+                  type: 'bar', 
                   data: { 
                       labels: [state.settings.names.child1, state.settings.names.child2], 
-                      datasets: [{ data: [sumChild1, sumChild2], backgroundColor: ['#6366f1', '#10b981'], borderWidth: 0 }] 
+                      datasets: childDatasets 
                   }, 
-                  options: standardChartOptions 
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                          legend: { position: 'right', labels: { boxWidth: 10, font: { size: 9 } } },
+                          datalabels: { display: false }
+                      },
+                      scales: {
+                          x: { stacked: true, ticks: { font: { size: 10 } } },
+                          y: { stacked: true, beginAtZero: true, ticks: { font: { size: 10 } } }
+                      }
+                  }
               }); 
           }
       }
