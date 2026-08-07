@@ -1436,7 +1436,7 @@ function triggerMobileChartRender() {
     });
 }
 
-      function unlockApp() {
+ function unlockApp() {
     const pwdInput = document.getElementById('unlock-pwd').value; 
     const encryptedData = localStorage.getItem('famfinanz_v11_state'); 
     const errorMsg = document.getElementById('unlock-error');
@@ -1445,7 +1445,16 @@ function triggerMobileChartRender() {
     try {
         const bytes = CryptoJS.AES.decrypt(encryptedData, pwdInput); 
         const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
-        if (!decryptedStr || decryptedStr.length === 0) throw new Error("Entschlüsselung fehlgeschlagen.");
+        
+        if (!decryptedStr || decryptedStr.length === 0) {
+            throw new Error("Entschlüsselung fehlgeschlagen.");
+        }
+        
+        // Prüfen, ob das Ergebnis valides JSON ist
+        const parsedState = JSON.parse(decryptedStr);
+        if (!parsedState || typeof parsedState !== 'object') {
+            throw new Error("Ungültige Datenstruktur.");
+        }
         
         window.appPassword = pwdInput; 
         errorMsg.classList.add('hidden'); 
@@ -1455,7 +1464,6 @@ function triggerMobileChartRender() {
         parseAndLoadState(decryptedStr); 
         updateEncryptionUI();
         
-        // KORREKTUR: Kurze Pause, damit das DOM 'app-wrapper' rendern kann
         requestAnimationFrame(() => {
             setTimeout(() => { 
                 initCharts(); 
@@ -1464,6 +1472,7 @@ function triggerMobileChartRender() {
             }, 100);
         });
     } catch (error) { 
+        errorMsg.textContent = "Passwort inkorrekt oder Daten korrupt.";
         errorMsg.classList.remove('hidden'); 
     }
 }
