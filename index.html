@@ -1302,85 +1302,58 @@ function determineDataSource(isin) {
 }
 
 /**
- * Generiert das HTML-Badge für die Datenquelle unter dem Preis.
+ * Generiert das HTML-Badge für die Datenquelle eines Kurses.
+ * 
+ * @param {string} source - 'XETRA' (oder 'BOERSE') für Automatisch, sonst 'MANUAL'
+ * @returns {string} HTML-String mit Tailwind-Klassen und Lucide-Icon
  */
 function getPriceSourceBadgeHtml(source) {
-  switch (source) {
-    case 'XETRA':
-      return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200" title="15 Min. verzögerter Kurs von Deutsche Börse / Xetra">
-                <i data-lucide="building-2" class="w-3 h-3"></i> Xetra 15m
-              </span>`;
-    case 'TWELVE_DATA':
-      return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200" title="Kurs von Twelve Data API">
-                <i data-lucide="globe" class="w-3 h-3"></i> Twelve Data
-              </span>`;
-    case 'MANUAL':
-    default:
-      return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200" title="Manuell eingegebener Kurs">
-                <i data-lucide="edit-3" class="w-3 h-3"></i> Manuell
-              </span>`;
+  if (source === 'XETRA' || source === 'BOERSE' || source === 'AUTO') {
+    return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200" title="15 Min. verzögerter Börsenkurs über Cloudflare Worker">
+              <i data-lucide="building-2" class="w-3 h-3"></i> Börse 15m
+            </span>`;
   }
+  
+  return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200" title="Manuell eingegebener Kurs">
+            <i data-lucide="edit-3" class="w-3 h-3"></i> Manuell
+          </span>`;
 }
 
 /**
- * Einheitliche Kernfunktion zum Kursabruf.
+ * Universal-Funktion zum Kursabruf über den Cloudflare Worker.
+ * Funktioniert für europäische UND US-Aktien gleichermaßen anhand der ISIN.
+ * 
+ * @param {Object} security - Wertpapier-Objekt aus dem Depot
+ * @returns {Promise<Object>} Standardisiertes Kursobjekt
  */
 async function getCurrentPrice(security) {
   const isin = (security.isinWkn || "").trim().toUpperCase();
-  const ticker = (security.ticker || "").trim().toUpperCase();
-  const sourceType = determineDataSource(isin);
 
-  // 1. XETRA VIA CLOUDFLARE WORKER
-  if (sourceType === 'XETRA') {
-    if (!isin || isin.length < 10) {
-      return { price: null, currency: "EUR", source: "XETRA", status: "ERROR", errorMessage: "Ungültige ISIN." };
-    }
-    try {
-      const response = await fetch(`${WORKER_URL}?isin=${isin}`);
-      if (!response.ok) throw new Error(`HTTP Fehler ${response.status}`);
-      return await response.json();
-    } catch (err) {
-      return { price: null, currency: "EUR", source: "XETRA", status: "ERROR", errorMessage: err.message };
-    }
+  if (!isin || isin.length < 10) {
+    return { 
+      price: null, 
+      currency: "EUR", 
+      source: "MANUAL", 
+      status: "ERROR", 
+      errorMessage: "Keine gültige ISIN hinterlegt." 
+    };
   }
 
-  // 2. TWELVE DATA FÜR NORDAMERIKA
-  if (sourceType === 'TWELVE_DATA') {
-    const apiKey = state.settings ? state.settings.twelveDataApiKey : "";
-    if (!ticker) {
-      return { price: null, currency: "USD", source: "TWELVE_DATA", status: "ERROR", errorMessage: "Kein Ticker hinterlegt." };
-    }
-    try {
-      const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey.trim()}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP Fehler ${response.status}`);
-      
-      const data = await response.json();
-      if (data.status === "error" || data.code) throw new Error(data.message || "API Fehler");
-
-      let parsedPrice = parseFloat(data.price);
-      let usdToEurRate = 1.0;
-
-      try {
-        const fxRes = await fetch(`https://api.twelvedata.com/price?symbol=USD/EUR&apikey=${apiKey.trim()}`);
-        if (fxRes.ok) {
-          const fxData = await fxRes.json();
-          if (fxData && fxData.price && !fxData.code) {
-            usdToEurRate = parseFloat(fxData.price) || 1.0;
-          }
-        }
-      } catch (fxErr) { console.warn("FX-Fehler", fxErr); }
-
-      return {
-        price: parsedPrice * usdToEurRate,
-        currency: "EUR",
-        source: "TWELVE_DATA",
-        timestamp: new Date().toISOString(),
-        status: "OK"
-      };
-    } catch (err) {
-      return { price: null, currency: "USD", source: "TWELVE_DATA", status: "ERROR", errorMessage: err.message };
-    }
+  try {
+    // Ruft jede ISIN direkt über deinen Cloudflare Worker ab
+    const response = await fetch(`${WORKER_URL}?isin=${isin}`);
+    if (!response.ok) throw new Error(`HTTP Fehler ${response.status}`);
+    
+    const data = await response.json();
+    return data; // Liefert direkt { price, currency, source: "XETRA", status: "OK" }
+  } catch (err) {
+    return { 
+      price: null, 
+      currency: "EUR", 
+      source: "MANUAL", 
+      status: "ERROR", 
+      errorMessage: err.message || "Verbindungsfehler zum Worker." 
+    };
   }
 }
       
@@ -2502,6 +2475,10 @@ function chunkArray(array, chunkSize) {
  * - Xetra-Kurse werden sofort parallel/sequenziell geladen.
  * - US-Kurse (Twelve Data) werden in 8er-Paketen mit 61s Pause verarbeitet.
  */
+/**
+ * Hauptschleife zur Kursaktualisierung aller Wertpapiere im Depot.
+ * Aktualisiert alle Positionen in wenigen Sekunden direkt über den Worker.
+ */
 async function updateDepotPrices() {
   const btn = document.getElementById('btn-update-prices');
   const originalHtml = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren`;
@@ -2517,93 +2494,36 @@ async function updateDepotPrices() {
   let successCount = 0;
   let failedList = [];
 
-  // 1. Wertpapiere nach Datenquelle trennen
-  const xetraAssets = [];
-  const twelveDataAssets = [];
-
-  state.depot.forEach(asset => {
-    const isin = (asset.isinWkn || "").trim().toUpperCase();
-    if (determineDataSource(isin) === 'TWELVE_DATA') {
-      twelveDataAssets.push(asset);
-    } else {
-      xetraAssets.push(asset);
-    }
-  });
-
   try {
-    // ---------------------------------------------------------
-    // SCHRITT A: Alle Xetra-Kurse direkt laden (keine Rate-Limits)
-    // ---------------------------------------------------------
-    for (let i = 0; i < xetraAssets.length; i++) {
-      const asset = xetraAssets[i];
-      btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade Xetra ${i + 1}/${xetraAssets.length}: ${asset.name || 'Aktie'}...`;
+    for (let i = 0; i < state.depot.length; i++) {
+      const asset = state.depot[i];
+
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade ${i + 1}/${state.depot.length}: ${asset.name || 'Aktie'}...`;
       lucide.createIcons();
 
       const priceResult = await getCurrentPrice(asset);
 
       if (priceResult && priceResult.status === "OK" && priceResult.price !== null) {
         asset.aktuellerPreis = priceResult.price;
-        asset.priceSource = priceResult.source;
+        asset.priceSource = priceResult.source || 'XETRA';
         asset.value = (asset.anzahl || 0) * priceResult.price;
         successCount++;
       } else {
-        failedList.push({ name: asset.name || "Unbenannt", reason: priceResult.errorMessage || "Kein Kurs" });
+        failedList.push({ 
+          name: asset.name || "Unbenannt", 
+          reason: priceResult.errorMessage || "Kein Kurs gefunden" 
+        });
       }
 
-      // UI nach jedem Xetra-Kurs sofort aktualisieren
+      // Speichern und UI sofort für jede Aktie aktualisieren
+      state.depotLastUpdate = new Date().toISOString();
       saveToLocalStorage();
       renderGenericTable('depot');
       updateCalculationsAndCharts();
       updateDepotTimestamp();
     }
 
-    // ---------------------------------------------------------
-    // SCHRITT B: US-Aktien (Twelve Data) in 8er-Paketen verarbeiten
-    // ---------------------------------------------------------
-    if (twelveDataAssets.length > 0) {
-      const CHUNK_SIZE = 8;
-      const totalChunks = Math.ceil(twelveDataAssets.length / CHUNK_SIZE);
-
-      for (let c = 0; c < totalChunks; c++) {
-        const chunk = twelveDataAssets.slice(c * CHUNK_SIZE, (c + 1) * CHUNK_SIZE);
-
-        // Ab dem 2. Paket: 61 Sekunden Countdown-Pause
-        if (c > 0) {
-          for (let sec = 61; sec > 0; sec--) {
-            btn.innerHTML = `<i data-lucide="clock" class="w-3.5 h-3.5 animate-spin"></i> Twelve Data Pause: Paket ${c + 1}/${totalChunks} in ${sec}s...`;
-            lucide.createIcons();
-            await new Promise(res => setTimeout(res, 1000));
-          }
-        }
-
-        // Paket verarbeiten
-        for (let j = 0; j < chunk.length; j++) {
-          const asset = chunk[j];
-          btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade US (${c + 1}/${totalChunks}): ${asset.name || 'Aktie'}...`;
-          lucide.createIcons();
-
-          const priceResult = await getCurrentPrice(asset);
-
-          if (priceResult && priceResult.status === "OK" && priceResult.price !== null) {
-            asset.aktuellerPreis = priceResult.price;
-            asset.priceSource = priceResult.source;
-            asset.value = (asset.anzahl || 0) * priceResult.price;
-            successCount++;
-          } else {
-            failedList.push({ name: asset.name || "Unbenannt", reason: priceResult.errorMessage || "Kein Kurs" });
-          }
-
-          saveToLocalStorage();
-          renderGenericTable('depot');
-          updateCalculationsAndCharts();
-          updateDepotTimestamp();
-        }
-      }
-    }
-
-    // ---------------------------------------------------------
-    // SCHRITT C: Abschlussmeldung
-    // ---------------------------------------------------------
+    // Abschlussmeldung
     if (successCount === state.depot.length) {
       alert(`Erfolg: Alle ${successCount} Kurse wurden erfolgreich aktualisiert!`);
     } else {
