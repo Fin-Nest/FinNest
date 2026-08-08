@@ -2291,124 +2291,192 @@ function triggerMobileChartRender() {
           lucide.createIcons();
       }
 
-      async function updateDepotPrices() {
-          const btn = document.getElementById('btn-update-prices');
-          const originalHtml = btn.innerHTML;
-          const apiKey = state.settings ? state.settings.twelveDataApiKey : "";
+      /**
+ * Hilfsfunktion: Pausiert die Ausführung des Codes für eine definierte Zeit.
+ * @param {number} ms - Wartezeit in Millisekunden
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-          if (!apiKey || apiKey.trim() === '') {
-              alert("Bitte trage zuerst deinen Twelve Data API-Key im Reiter 'Personalisierung' ein.");
-              switchTab('settings');
-              return;
-          }
+/**
+ * Hilfsfunktion: Teilt ein großes Array in kleinere Pakete (Chunks) auf.
+ * @param {Array} array - Das ursprüngliche Array mit allen Tickern
+ * @param {number} chunkSize - Maximale Anzahl Elemente pro Paket
+ * @returns {Array<Array>} Array von Teil-Arrays
+ */
+function chunkArray(array, chunkSize) {
+    const results = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+        results.push(array.slice(i, i + chunkSize));
+    }
+    return results;
+}
 
-          btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade Kurse...';
-          lucide.createIcons();
+/**
+ * Aktualisiert alle Depot-Positionen mittels Paket-Streaming.
+ * Halbiert oder drittelt Anfragen nicht, sondern streamt sie in 8er-Paketen mit Pausen.
+ */
+async function updateDepotPrices() {
+    const btn = document.getElementById('btn-update-prices');
+    const originalHtml = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren (Twelve Data)`;
+    const apiKey = state.settings ? state.settings.twelveDataApiKey : "";
 
-          const itemsToFetch = [];
-          const tickersToFetch = [];
+    // 1. Validierung des API-Keys
+    if (!apiKey || apiKey.trim() === '') {
+        alert("Bitte trage zuerst deinen Twelve Data API-Key im Reiter 'Personalisierung' ein.");
+        switchTab('settings');
+        return;
+    }
 
-          state.depot.forEach(item => {
-              if (item.ticker && item.ticker.trim() !== '') {
-                  itemsToFetch.push(item);
-                  tickersToFetch.push(item.ticker.trim().toUpperCase());
-              }
-          });
+    // 2. Gültige Ticker aus dem Depot extrahieren
+    const itemsToFetch = [];
+    const tickersToFetch = [];
 
-          if (tickersToFetch.length === 0) {
-              alert("Keine Depot-Positionen mit gültigem Ticker vorhanden.");
-              btn.innerHTML = originalHtml;
-              lucide.createIcons();
-              return;
-          }
+    state.depot.forEach(item => {
+        if (item.ticker && item.ticker.trim() !== '') {
+            itemsToFetch.push(item);
+            tickersToFetch.push(item.ticker.trim().toUpperCase());
+        }
+    });
 
-          try {
-              const symbolsParam = encodeURIComponent(tickersToFetch.join(','));
-              const priceUrl = `https://api.twelvedata.com/price?symbol=${symbolsParam}&apikey=${apiKey.trim()}`;
-              
-              const res = await fetch(priceUrl);
-              if (!res.ok) throw new Error(`HTTP Fehler ${res.status}`);
-              const priceResponse = await res.json();
+    if (tickersToFetch.length === 0) {
+        alert("Keine Depot-Positionen mit gültigem Ticker vorhanden.\n\nBitte trage bei deinen Aktien/ETFs einen Ticker ein (z. B. 'BMW.DEX' oder 'AAPL').");
+        return;
+    }
 
-              let rawPrices = {};
-              if (tickersToFetch.length === 1) {
-                  const singleTicker = tickersToFetch[0];
-                  rawPrices[singleTicker] = priceResponse;
-              } else {
-                  rawPrices = priceResponse;
-              }
+    // 3. Aufteilen in Pakete von max. 8 Tickern (Free Tier Limit)
+    const CHUNK_SIZE = 8;
+    const tickerChunks = chunkArray(tickersToFetch, CHUNK_SIZE);
+    const totalChunks = tickerChunks.length;
+    
+    let totalSuccessCount = 0;
+    let failedList = [];
 
-              let usdToEurRate = 1.0;
-              const hasUsTickers = tickersToFetch.some(t => !t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE'));
+    // Button während des Streamings sperren
+    btn.disabled = true;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
 
-              if (hasUsTickers) {
-                  try {
-                      const fxRes = await fetch(`https://api.twelvedata.com/price?symbol=USD/EUR&apikey=${apiKey.trim()}`);
-                      if (fxRes.ok) {
-                          const fxData = await fxRes.json();
-                          if (fxData && fxData.price) {
-                              usdToEurRate = parseFloat(fxData.price) || 1.0;
-                          }
-                      }
-                  } catch (fxErr) { console.warn("FX-Kurs Fehler", fxErr); }
-              }
+    try {
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const currentChunk = tickerChunks[chunkIndex];
 
-              let successCount = 0;
-              let failedList = [];
+            // Wenn es nicht das erste Paket ist: 61 Sekunden Countdown ausführen
+            if (chunkIndex > 0) {
+                const waitSeconds = 61;
+                for (let sec = waitSeconds; sec > 0; sec--) {
+                    btn.innerHTML = `<i data-lucide="clock" class="w-3.5 h-3.5 animate-spin"></i> Paket ${chunkIndex + 1}/${totalChunks}: Pause (${sec}s)...`;
+                    lucide.createIcons();
+                    await delay(1000); // 1 Sekunde warten
+                }
+            }
 
-              state.depot.forEach(item => {
-                  if (!item.ticker || item.ticker.trim() === '') return;
-                  const t = item.ticker.trim().toUpperCase();
-                  const symbolData = rawPrices[t];
+            // Status-Anzeige im Button aufbauen
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Lade Paket ${chunkIndex + 1}/${totalChunks}...`;
+            lucide.createIcons();
 
-                  if (symbolData && symbolData.price) {
-                      let parsedPrice = parseFloat(symbolData.price);
-                      if (!t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE')) {
-                          parsedPrice = parsedPrice * usdToEurRate;
-                      }
-                      item.aktuellerPreis = parsedPrice;
-                      item.value = (item.anzahl || 0) * parsedPrice;
-                      successCount++;
-                  } else {
-                      failedList.push(item);
-                  }
-              });
+            // 4. API-Anfrage für das aktuelle 8er-Paket senden
+            const symbolsParam = encodeURIComponent(currentChunk.join(','));
+            const priceUrl = `https://api.twelvedata.com/price?symbol=${symbolsParam}&apikey=${apiKey.trim()}`;
+            
+            const res = await fetch(priceUrl);
 
-              state.depotLastUpdate = new Date().toISOString();
-              saveToLocalStorage();
-              renderGenericTable('depot');
-              updateCalculationsAndCharts();
-              updateDepotTimestamp();
+            if (!res.ok) {
+                if (res.status === 429) {
+                    throw new Error("Rate-Limit erreicht (HTTP 429). Bitte warte kurz vor dem nächsten Versuch.");
+                }
+                throw new Error(`Serverfehler: HTTP ${res.status}`);
+            }
 
-              const totalCount = itemsToFetch.length;
-              if (successCount === totalCount) {
-                  btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Erfolgreich (${successCount}/${totalCount})`;
-                  btn.classList.replace('text-blue-700', 'text-emerald-700');
-                  btn.classList.replace('bg-blue-100', 'bg-emerald-100');
-                  setTimeout(() => alert(`Erfolg: Alle ${totalCount} Depot-Positionen wurden erfolgreich aktualisiert!`), 150);
-              } else {
-                  btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Teilweise (${successCount}/${totalCount})`;
-                  btn.classList.replace('text-blue-700', 'text-amber-700');
-                  btn.classList.replace('bg-blue-100', 'bg-amber-100');
-                  let failedText = failedList.map(i => `• ${i.name || 'Unbenannt'} (Ticker: ${i.ticker || 'keiner'})`).join('\n');
-                  setTimeout(() => alert(`Update abgeschlossen: ${successCount} von ${totalCount} Kursen geladen.\n\nFolgende Positionen konnten nicht geladen werden:\n${failedText}`), 150);
-              }
+            const priceResponse = await res.json();
 
-          } catch (err) {
-              console.error("API Fehler:", err);
-              btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Fehler beim Abruf`;
-              btn.classList.replace('text-blue-700', 'text-rose-700');
-              btn.classList.replace('bg-blue-100', 'bg-rose-100');
-              setTimeout(() => alert("Fehler bei der Verbindung zu Twelve Data. Bitte API-Key und Internetverbindung prüfen."), 150);
-          }
+            if (priceResponse.status === "error" || priceResponse.code) {
+                throw new Error(`API Fehler: ${priceResponse.message || "Kursabruf fehlgeschlagen"}`);
+            }
 
-          setTimeout(() => {
-              btn.innerHTML = originalHtml;
-              btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm";
-              lucide.createIcons();
-          }, 4000);
-      }
+            let rawPrices = {};
+            if (currentChunk.length === 1) {
+                rawPrices[currentChunk[0]] = priceResponse;
+            } else {
+                rawPrices = priceResponse;
+            }
 
+            // 5. USD/EUR-Wechselkurs laden, falls US-Titel im Paket sind
+            let usdToEurRate = 1.0;
+            const hasUsTickers = currentChunk.some(t => !t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE'));
+
+            if (hasUsTickers) {
+                try {
+                    const fxRes = await fetch(`https://api.twelvedata.com/price?symbol=USD/EUR&apikey=${apiKey.trim()}`);
+                    if (fxRes.ok) {
+                        const fxData = await fxRes.json();
+                        if (fxData && fxData.price && !fxData.code) {
+                            usdToEurRate = parseFloat(fxData.price) || 1.0;
+                        }
+                    }
+                } catch (fxErr) {
+                    console.warn("USD/EUR Wechselkurs konnte nicht geladen werden, nutze 1.0", fxErr);
+                }
+            }
+
+            // 6. Geladene Werte direkt im Anwendungsstatus verarbeiten
+            state.depot.forEach(item => {
+                if (!item.ticker) return;
+                const t = item.ticker.trim().toUpperCase();
+                
+                if (currentChunk.includes(t)) {
+                    const symbolData = rawPrices[t];
+                    if (symbolData && symbolData.price && !symbolData.code) {
+                        let parsedPrice = parseFloat(symbolData.price);
+                        if (!t.includes('.DEX') && !t.includes('.F') && !t.includes('.DE')) {
+                            parsedPrice = parsedPrice * usdToEurRate;
+                        }
+                        item.aktuellerPreis = parsedPrice;
+                        item.value = (item.anzahl || 0) * parsedPrice;
+                        totalSuccessCount++;
+                    } else {
+                        failedList.push(item);
+                    }
+                }
+            });
+
+            // Teilergebnisse sofort speichern und rendern
+            state.depotLastUpdate = new Date().toISOString();
+            state.depotLastUpdateTimestamp = Date.now();
+            saveToLocalStorage();
+            renderGenericTable('depot');
+            updateCalculationsAndCharts();
+            updateDepotTimestamp();
+        }
+
+        // 7. Abschlussmeldung anzeigen
+        const totalCount = tickersToFetch.length;
+        if (totalSuccessCount === totalCount) {
+            btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Alle ${totalSuccessCount} Kurse geladen!`;
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 font-bold text-xs rounded-lg transition-all shadow-sm";
+            setTimeout(() => alert(`Erfolg: Alle ${totalCount} Depot-Positionen wurden in ${totalChunks} Paketen erfolgreich aktualisiert!`), 150);
+        } else {
+            btn.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> ${totalSuccessCount}/${totalCount} geladen`;
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 font-bold text-xs rounded-lg transition-all shadow-sm";
+            let failedText = failedList.map(i => `• ${i.name || 'Unbenannt'} (${i.ticker || 'kein Ticker'})`).join('\n');
+            setTimeout(() => alert(`Update beendet: ${totalSuccessCount} von ${totalCount} Kursen geladen.\n\nFehlerhafte Ticker:\n${failedText}`), 150);
+        }
+
+    } catch (err) {
+        console.error("Fehler beim Paket-Streaming:", err);
+        btn.innerHTML = `<i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Abbruch`;
+        btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 text-rose-700 font-bold text-xs rounded-lg transition-all shadow-sm";
+        setTimeout(() => alert(`Abruf abgebrochen:\n\n${err.message}`), 150);
+    } finally {
+        // Button nach 5 Sekunden wieder freigeben
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            btn.innerHTML = originalHtml;
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm";
+            lucide.createIcons();
+        }, 5000);
+    }
+}
       function updateDepotTimestamp() {
           const el = document.getElementById('depot-last-update');
           if(el) {
