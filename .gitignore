@@ -1,0 +1,19 @@
+# Personal & Local Data
+# Verhindert das Hochladen lokaler Datenspeicher und Browser-Backups
+*.json
+!manifest.json
+
+# Local Environment & API Keys
+# Falls du Entwicklungs-Umgebungsvariablen nutzt
+.env
+.env.local
+*.env
+
+# Operating System Files
+# Verhindert das Hochladen von System-Dateien
+.DS_Store
+Thumbs.db
+
+# IDE & Editor Settings
+.vscode/
+.idea/
