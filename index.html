@@ -741,7 +741,7 @@
                       </div>
                       <div class="flex gap-2 flex-wrap">
                           <button onclick="updateDepotPrices()" id="btn-update-prices" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold rounded-lg transition-all shadow-sm">
-                              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren (Twelve Data)
+                              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Kurse aktualisieren
                           </button>
                           <button onclick="exportDepotCSV()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-medium rounded-lg transition-all">
                               <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV Export
@@ -1288,18 +1288,16 @@ function parseNumberInput(val) {
 const WORKER_URL = "https://finnest-xetra-adapter.martin-schluifelder.workers.dev";
 
 /**
- * Bestimmt die Datenquelle vollautomatisch anhand des Ländercodes der ISIN.
+ * Bestimmt die Datenquelle für die Kursaktualisierung.
+ * Da mittlerweile alle Wertpapiere (auch US- und kanadische ISINs) 
+ * über den eigenen Cloudflare-Worker abgerufen werden, leiten wir 
+ * alle Anfragen einheitlich an die Worker-Logik ('XETRA') weiter.
+ *
+ * @param {string} isin - Die ISIN des Wertpapiers (z. B. DE0007100000 oder US0378331005)
+ * @returns {string} Gibt durchgehend 'XETRA' zurück
  */
 function determineDataSource(isin) {
-  if (!isin) return 'XETRA';
-  const cleanIsin = isin.trim().toUpperCase();
-
-  // US-, Cayman- (KY) oder Kanada-ISINs laufen über Twelve Data
-  if (cleanIsin.startsWith('US') || cleanIsin.startsWith('KY') || cleanIsin.startsWith('CA')) {
-    return 'TWELVE_DATA';
-  }
-
-  // Alle europäischen & deutschen Wertpapiere laufen direkt über Xetra
+  // Alle Wertpapiere laufen nun zentral über deinen Cloudflare-Worker
   return 'XETRA';
 }
 
@@ -1425,7 +1423,7 @@ async function getCurrentPrice(security) {
       let state = {
           settings: { 
               names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, 
-              applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", 
+              applyCapitalGainsTax: false, includeImmoInEK: false, 
               securityQuestion: "", securityAnswerEncrypted: "",
               sort: {}, sortDepotHistory: { field: 'sellDate', dir: 'desc' } 
           },
@@ -1629,34 +1627,73 @@ function triggerMobileChartRender() {
           }
       }
 
-      function parseAndLoadState(jsonStr) {
-          if (jsonStr) { try { state = JSON.parse(jsonStr); } catch(e) { console.error("JSON Parsing Error", e); } }
-          
-          if (!state.settings) state.settings = { names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, applyCapitalGainsTax: false, includeImmoInEK: false, twelveDataApiKey: "", securityQuestion: "", securityAnswerEncrypted: "", sort: {}, sortDepotHistory: { field: 'sellDate', dir: 'desc' } };
-          if (typeof state.settings.applyCapitalGainsTax === 'undefined') state.settings.applyCapitalGainsTax = false;
-          if (typeof state.settings.includeImmoInEK === 'undefined') state.settings.includeImmoInEK = false;
-          if (typeof state.settings.twelveDataApiKey === 'undefined') state.settings.twelveDataApiKey = "";
-          if (!state.settings.sort) state.settings.sort = {};
-          if (!state.settings.sortDepotHistory) state.settings.sortDepotHistory = { field: 'sellDate', dir: 'desc' };
-          if (!state.liabilities) state.liabilities = [];
-          if (!state.salaryHistory) state.salaryHistory = { husband: [], wife: [] };
-          if (!state.depotHistory) state.depotHistory = [];
-          if (!state.accountTracker) state.accountTracker = [];
-          if (!state.expenses.rentOwner) state.expenses.rentOwner = "both";
-          if (!state.expenses.householdOwner) state.expenses.householdOwner = "both";
-          if (!state.calculated) state.calculated = { mtlIncome: 0, mtlExpenses: 0 };
-          
-          if (state.depot) {
-              state.depot.forEach(d => {
-                  if(typeof d.anzahl === 'undefined') d.anzahl = 1;
-                  if(typeof d.kaufpreis === 'undefined') d.kaufpreis = d.value || 0;
-                  if(typeof d.aktuellerPreis === 'undefined') d.aktuellerPreis = d.value || 0;
-                  if(typeof d.ticker === 'undefined') { d.ticker = d.wkn || ""; delete d.wkn; }
-                  if(typeof d.isinWkn === 'undefined') d.isinWkn = "";
-                  if(typeof d.bank === 'undefined') d.bank = "";
-                  d.value = d.anzahl * d.aktuellerPreis;
-              });
-          }
+      /**
+ * Parst den gespeicherten JSON-String und stellt sicher, dass alle
+ * erforderlichen Datenstrukturen und Abwärtskompatibilitäten im 'state' vorhanden sind.
+ * 
+ * @param {string} jsonStr - Der aus dem LocalStorage oder Backup geladene JSON-String
+ */
+function parseAndLoadState(jsonStr) {
+  if (jsonStr) { 
+    try { 
+      state = JSON.parse(jsonStr); 
+    } catch(e) { 
+      console.error("JSON Parsing Error", e); 
+    } 
+  }
+  
+  // 1. Standard-Settings initialisieren, falls 'state.settings' noch nicht existiert
+  if (!state.settings) {
+    state.settings = { 
+      names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, 
+      applyCapitalGainsTax: false, 
+      includeImmoInEK: false, 
+      securityQuestion: "", 
+      securityAnswerEncrypted: "", 
+      sort: {}, 
+      sortDepotHistory: { field: 'sellDate', dir: 'desc' } 
+    };
+  }
+
+  // 2. Einzelne Einstellungs-Eigenschaften absichern
+  if (typeof state.settings.applyCapitalGainsTax === 'undefined') state.settings.applyCapitalGainsTax = false;
+  if (typeof state.settings.includeImmoInEK === 'undefined') state.settings.includeImmoInEK = false;
+
+  // 3. ALT-RÜCKSTAND BEREINIGEN:
+  // Falls ein alter Spielstand geladen wird, der noch 'twelveDataApiKey' enthält,
+  // löschen wir diese Eigenschaft direkt aus dem Speicher.
+  if (typeof state.settings.twelveDataApiKey !== 'undefined') {
+    delete state.settings.twelveDataApiKey;
+  }
+
+  // 4. Fehlende Datenstrukturen absichern
+  if (!state.settings.sort) state.settings.sort = {};
+  if (!state.settings.sortDepotHistory) state.settings.sortDepotHistory = { field: 'sellDate', dir: 'desc' };
+  if (!state.liabilities) state.liabilities = [];
+  if (!state.salaryHistory) state.salaryHistory = { husband: [], wife: [] };
+  if (!state.depotHistory) state.depotHistory = [];
+  if (!state.accountTracker) state.accountTracker = [];
+  
+  if (!state.expenses) state.expenses = {};
+  if (!state.expenses.rentOwner) state.expenses.rentOwner = "both";
+  if (!state.expenses.householdOwner) state.expenses.householdOwner = "both";
+  if (!state.calculated) state.calculated = { mtlIncome: 0, mtlExpenses: 0 };
+  
+  // 5. Depot-Einträge migrieren & Datenstruktur konsistent halten
+  if (state.depot && Array.isArray(state.depot)) {
+    state.depot.forEach(d => {
+      if (typeof d.anzahl === 'undefined') d.anzahl = 1;
+      if (typeof d.kaufpreis === 'undefined') d.kaufpreis = d.value || 0;
+      if (typeof d.aktuellerPreis === 'undefined') d.aktuellerPreis = d.value || 0;
+      if (typeof d.ticker === 'undefined') { d.ticker = d.wkn || ""; delete d.wkn; }
+      if (typeof d.isinWkn === 'undefined') d.isinWkn = "";
+      if (typeof d.bank === 'undefined') d.bank = "";
+      
+      // Gesamtwert basierend auf Anzahl und aktuellem Preis berechnen
+      d.value = d.anzahl * d.aktuellerPreis;
+    });
+  }
+}
 
           loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
           renderAllTables(); renderSalaryComponents(); renderSalaryHistoryTables();
