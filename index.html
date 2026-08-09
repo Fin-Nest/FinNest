@@ -1259,6 +1259,24 @@
   </div>
 
   <script>
+    /**
+ * Konvertiert Benutzereingaben sicher in eine Fließkommazahl.
+ * Akzeptiert sowohl Komma (12,50) als auch Punkt (12.50) als Dezimaltrenner.
+ *
+ * @param {string|number} val - Der Wert aus dem Input-Feld
+ * @returns {number} Gültige Zahl oder 0 bei fehlerhafter Eingabe
+ */
+function parseNumberInput(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+
+  // Wandelt Kommas in Punkte um, damit parseFloat() den Wert korrekterweise liest
+  const sanitizedValue = String(val).trim().replace(',', '.');
+  const parsed = parseFloat(sanitizedValue);
+
+  return isNaN(parsed) ? 0 : parsed;
+}
+    
       window.appPassword = null;
       let activeSellingAssetIndex = null;
 
@@ -1454,7 +1472,7 @@ async function getCurrentPrice(security) {
       }
 
       function setupCurrencyFocus(input) { let num = parseEuroInput(input.value); input.value = num === 0 ? '' : num.toFixed(2); }
-      function setupCurrencyBlur(input) { let num = parseFloat(input.value) || 0; input.value = formatEuroDisplay(num); }
+      function setupCurrencyBlur(input) { let num = parseEuroInput(input.value) || 0; input.value = formatEuroDisplay(num); }
 
       function updateCategorySum(elementId, valH, valW, valB) {
           const el = document.getElementById(elementId);
@@ -1800,7 +1818,7 @@ function triggerMobileChartRender() {
           if(document.getElementById('exp-household-owner')) state.expenses.householdOwner = document.getElementById('exp-household-owner').value;
           
           if(document.getElementById('immo-sollzins')) {
-              state.immoPlanning.sollzins = parseFloat(document.getElementById('immo-sollzins').value) || 3.69; state.immoPlanning.tilgung = parseFloat(document.getElementById('immo-tilgung').value) || 1.4;
+              state.immoPlanning.sollzins = parseEuroInput(document.getElementById('immo-sollzins').value) || 3.69; state.immoPlanning.tilgung = parseEuroInput(document.getElementById('immo-tilgung').value) || 1.4;
               state.immoPlanning.sicherheitsreserve = parseEuroInput(document.getElementById('immo-reserve').value);
           }
           saveToLocalStorage(); updateCalculationsAndCharts();
@@ -2108,16 +2126,31 @@ config.cols.forEach(col => {
             td.appendChild(input);
         }
     } 
-    // 6. Zahlen-Felder (Number)
-    else if (col.type === 'number') {
-        const input = document.createElement('input');
-        input.type = 'number';
-        if (col.step) input.step = col.step;
-        input.value = item[col.field]; 
-        input.className = 'w-full px-2 py-1 bg-transparent text-xs text-right focus:outline-none border-b border-transparent hover:border-slate-200 font-medium';
-        input.onchange = (e) => handleTableUpdate(config.path, index, col.field, parseFloat(e.target.value) || 0, configKey);
-        td.appendChild(input);
-    } 
+// 6. Zahlen-Felder (Number / Währung)
+else if (col.type === 'number') {
+    const input = document.createElement('input');
+    
+    // OPTIMIERUNG: 'text' + 'decimal' erlaubt Kommas ohne Browser-Blockade,
+    // zeigt aber auf Smartphones/Tablets trotzdem die Zahlentastatur an.
+    input.type = 'text';
+    input.inputMode = 'decimal';
+
+    // Bisherigen Wert sicher zuweisen
+    input.value = (item[col.field] !== undefined && item[col.field] !== null) ? item[col.field] : ''; 
+    
+    input.className = 'w-full px-2 py-1 bg-transparent text-xs text-right focus:outline-none border-b border-transparent hover:border-slate-200 font-medium';
+    
+    // KORREKTUR: parseEuroInput statt parseFloat nutzen
+    input.onchange = (e) => handleTableUpdate(
+        config.path, 
+        index, 
+        col.field, 
+        parseEuroInput(e.target.value), 
+        configKey
+    );
+    
+    td.appendChild(input);
+}
     // 7. Standard-Textfelder
     else {
         const input = document.createElement('input');
@@ -2215,7 +2248,7 @@ if (configKey === 'depot') {
       }
 
       function calculateSellPreview() {
-          const anzahl = parseFloat(document.getElementById('sell-anzahl').value) || 0;
+          const anzahl = parseEuroInput(document.getElementById('sell-anzahl').value) || 0;
           const kaufpreis = parseEuroInput(document.getElementById('sell-kaufpreis').value);
           const verkaufskurs = parseEuroInput(document.getElementById('sell-verkaufskurs').value);
           const gebuehren = parseEuroInput(document.getElementById('sell-gebuehren').value);
@@ -2242,8 +2275,8 @@ if (configKey === 'depot') {
           const asset = state.depot[activeSellingAssetIndex];
           if (!asset) return;
 
-          const verfuegbarAnzahl = parseFloat(asset.anzahl) || 0;
-          const verkaufAnzahl = parseFloat(document.getElementById('sell-anzahl').value) || 0;
+          const verfuegbarAnzahl = parseEuroInput(asset.anzahl) || 0;
+          const verkaufAnzahl = parseEuroInput(document.getElementById('sell-anzahl').value) || 0;
 
           if (verkaufAnzahl <= 0) {
               alert("Bitte gib eine gültige Verkaufsmenge ein (größer als 0).");
@@ -2872,7 +2905,7 @@ async function updateDepotPrices() {
 
       function initWealthProjectionChart() { 
           const ctx = document.getElementById('chartWealthProjection'); if(!ctx) return;
-          const rTg = (parseFloat(document.getElementById('proj-return-tg').value) || 2.5) / 100; const rFg = (parseFloat(document.getElementById('proj-return-fg').value) || 3.5) / 100; const rDep = (parseFloat(document.getElementById('proj-return-depot').value) || 6.0) / 100; const inflationRate = (parseFloat(document.getElementById('proj-inflation').value) || 2.0) / 100;
+          const rTg = (parseEuroInput(document.getElementById('proj-return-tg').value) || 2.5) / 100; const rFg = (parseEuroInput(document.getElementById('proj-return-fg').value) || 3.5) / 100; const rDep = (parseEuroInput(document.getElementById('proj-return-depot').value) || 6.0) / 100; const inflationRate = (parseEuroInput(document.getElementById('proj-inflation').value) || 2.0) / 100;
           let baseTgNominal = state.assets.tagesgeld ? state.assets.tagesgeld.reduce((s,i)=>s+i.value,0) : 0; let baseFgNominal = state.assets.festgeld ? state.assets.festgeld.reduce((s,i)=>s+i.value,0) : 0; let baseDepNominal = state.depot ? state.depot.reduce((s,i)=>s+i.value,0) : 0;
           let baseTgReal = baseTgNominal; let baseFgReal = baseFgNominal; let baseDepReal = baseDepNominal; let mtlSparrate = state.investments ? state.investments.reduce((s,i)=>s+i.value,0) : 0; const jahresSparsumme = mtlSparrate * 12;
           let nominalLabels = ["Heute"]; let nominalData = [baseTgNominal + baseFgNominal + baseDepNominal]; let realData = [baseTgNominal + baseFgNominal + baseDepNominal];
