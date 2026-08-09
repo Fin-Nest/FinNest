@@ -1622,59 +1622,69 @@ function triggerMobileChartRender() {
           document.getElementById('pwd-standard-form').classList.remove('hidden');
       }
 
-      function confirmPasswordReset() {
-          const answerInput = document.getElementById('reset-answer-input').value.trim().toLowerCase();
-          const newPwd = document.getElementById('reset-new-pwd').value;
-          const errorEl = document.getElementById('reset-error');
+     function confirmPasswordReset() {
+    const answerInput = document.getElementById('reset-answer-input').value.trim().toLowerCase();
+    const newPwd = document.getElementById('reset-new-pwd').value;
+    const errorEl = document.getElementById('reset-error');
 
-          if (!answerInput || !newPwd) {
-              errorEl.innerText = "Bitte alle Felder ausfüllen.";
-              errorEl.classList.remove('hidden');
-              return;
-          }
+    if (!answerInput || !newPwd) {
+        errorEl.innerText = "Bitte alle Felder ausfüllen.";
+        errorEl.classList.remove('hidden');
+        return;
+    }
 
-          const encRecoveryKey = localStorage.getItem('famfinanz_sec_recovery');
-          if (!encRecoveryKey) {
-              errorEl.innerText = "Keine Wiederherstellungsdaten vorhanden.";
-              errorEl.classList.remove('hidden');
-              return;
-          }
+    const rawRecovery = localStorage.getItem('famfinanz_sec_recovery');
+    if (!rawRecovery) {
+        errorEl.innerText = "Keine Wiederherstellungsdaten vorhanden.";
+        errorEl.classList.remove('hidden');
+        return;
+    }
 
-          try {
-              const bytes = CryptoJS.AES.decrypt(encRecoveryKey, answerInput);
-              const oldMasterPwd = bytes.toString(CryptoJS.enc.Utf8);
+    try {
+        const payload = JSON.parse(rawRecovery);
+        const salt = CryptoJS.enc.Hex.parse(payload.salt);
+        
+        // Gleiche Schlüsselableitung durchführen
+        const derivedKey = CryptoJS.PBKDF2(answerInput, salt, {
+            keySize: 256 / 32,
+            iterations: 10000
+        });
 
-              if (!oldMasterPwd || oldMasterPwd.length === 0) {
-                  throw new Error("Antwort falsch");
-              }
+        const bytes = CryptoJS.AES.decrypt(payload.data, derivedKey.toString());
+        const oldMasterPwd = bytes.toString(CryptoJS.enc.Utf8);
 
-              const encryptedState = localStorage.getItem('famfinanz_v11_state');
-              const stateBytes = CryptoJS.AES.decrypt(encryptedState, oldMasterPwd);
-              const rawStateJson = stateBytes.toString(CryptoJS.enc.Utf8);
+        if (!oldMasterPwd || oldMasterPwd.length === 0) {
+            throw new Error("Antwort falsch");
+        }
 
-              if (!rawStateJson) throw new Error("Fehler beim Dekodieren der Finanzdaten.");
+        // Tresor mit dem neuen Passwort neu verschlüsseln
+        const encryptedState = localStorage.getItem('famfinanz_v11_state');
+        const stateBytes = CryptoJS.AES.decrypt(encryptedState, oldMasterPwd);
+        const rawStateJson = stateBytes.toString(CryptoJS.enc.Utf8);
 
-              window.appPassword = newPwd;
-              const newEncryptedState = CryptoJS.AES.encrypt(rawStateJson, newPwd).toString();
-              localStorage.setItem('famfinanz_v11_state', newEncryptedState);
+        if (!rawStateJson) throw new Error("Fehler beim Dekodieren der Finanzdaten.");
 
-              const newEncryptedRecovery = CryptoJS.AES.encrypt(newPwd, answerInput).toString();
-              localStorage.setItem('famfinanz_sec_recovery', newEncryptedRecovery);
+        window.appPassword = newPwd;
+        const newEncryptedState = CryptoJS.AES.encrypt(rawStateJson, newPwd).toString();
+        localStorage.setItem('famfinanz_v11_state', newEncryptedState);
 
-              alert("Dein Masterpasswort wurde erfolgreich zurückgesetzt! Der Tresor wird geöffnet.");
-              hideResetPasswordModal();
-              document.getElementById('lock-screen').classList.add('hidden');
-              document.getElementById('app-wrapper').classList.remove('hidden');
+        // Recovery Payload für das neue Passwort aktualisieren
+        const newEncryptedRecovery = CryptoJS.AES.encrypt(newPwd, derivedKey.toString()).toString();
+        const newPayload = JSON.stringify({ salt: payload.salt, data: newEncryptedRecovery });
+        localStorage.setItem('famfinanz_sec_recovery', newPayload);
 
-              parseAndLoadState(rawStateJson);
-              updateEncryptionUI();
-              setTimeout(() => { initCharts(); initWealthProjectionChart(); renderSalaryChart(); }, 100);
+        alert("Dein Masterpasswort wurde erfolgreich zurückgesetzt!");
+        hideResetPasswordModal();
+        document.getElementById('lock-screen').classList.add('hidden');
+        document.getElementById('app-wrapper').classList.remove('hidden');
 
-          } catch (err) {
-              errorEl.innerText = "Antwort auf die Sicherheitsfrage ist inkorrekt.";
-              errorEl.classList.remove('hidden');
-          }
-      }
+        parseAndLoadState(rawStateJson);
+        updateEncryptionUI();
+    } catch (err) {
+        errorEl.innerText = "Antwort auf die Sicherheitsfrage ist inkorrekt.";
+        errorEl.classList.remove('hidden');
+    }
+}
 
 // Speichert den aktuellen Sortierzustand für den Tagesgeldtracker
 let tagesgeldSortState = {
@@ -1834,11 +1844,29 @@ function parseAndLoadState(jsonStr) {
 
           window.appPassword = p1; saveToLocalStorage();
 
-          if (secQ && secA) {
-              localStorage.setItem('famfinanz_sec_question', secQ);
-              const encRecovery = CryptoJS.AES.encrypt(p1, secA).toString();
-              localStorage.setItem('famfinanz_sec_recovery', encRecovery);
-          }
+          // SICHERE VARIANTE mit PBKDF2 Schlüsselableitung:
+if (secQ && secA) {
+    localStorage.setItem('famfinanz_sec_question', secQ);
+    
+    // Erzeuge einen zufälligen Salt
+    const salt = CryptoJS.lib.WordArray.random(128 / 8);
+    
+    // Leite einen starken Schlüssel aus der Antwort ab (10.000 Iterationen)
+    const derivedKey = CryptoJS.PBKDF2(secA, salt, {
+        keySize: 256 / 32,
+        iterations: 10000
+    });
+    
+    const encRecovery = CryptoJS.AES.encrypt(p1, derivedKey.toString()).toString();
+    
+    // Speichere Salt und verschlüsselten Key zusammen
+    const recoveryPayload = JSON.stringify({
+        salt: salt.toString(),
+        data: encRecovery
+    });
+    
+    localStorage.setItem('famfinanz_sec_recovery', recoveryPayload);
+}
 
           document.getElementById('set-pwd-1').value = ''; document.getElementById('set-pwd-2').value = '';
           msg.textContent = "Masterpasswort & Sicherheitsfrage erfolgreich hinterlegt."; msg.className = "text-xs font-medium mt-1 text-emerald-600"; updateEncryptionUI();
