@@ -1742,6 +1742,12 @@ function sortTagesgeld(column) {
  * 
  * @param {string} jsonStr - Der aus dem LocalStorage oder Backup geladene JSON-String
  */
+/**
+ * Parst den gespeicherten JSON-String, stellt Abwärtskompatibilitäten sicher
+ * und lädt anschließend alle Daten in die Formularfelder und Tabellen.
+ * 
+ * @param {string} jsonStr - Der aus dem LocalStorage oder Backup geladene JSON-String
+ */
 function parseAndLoadState(jsonStr) {
   if (jsonStr) { 
     try { 
@@ -1751,7 +1757,7 @@ function parseAndLoadState(jsonStr) {
     } 
   }
   
-  // 1. Standard-Settings initialisieren, falls 'state.settings' noch nicht existiert
+  // 1. Standard-Settings initialisieren
   if (!state.settings) {
     state.settings = { 
       names: { husband: "Ehemann", wife: "Ehefrau", child1: "Kind 1", child2: "Kind 2" }, 
@@ -1768,9 +1774,7 @@ function parseAndLoadState(jsonStr) {
   if (typeof state.settings.applyCapitalGainsTax === 'undefined') state.settings.applyCapitalGainsTax = false;
   if (typeof state.settings.includeImmoInEK === 'undefined') state.settings.includeImmoInEK = false;
 
-  // 3. ALT-RÜCKSTAND BEREINIGEN:
-  // Falls ein alter Spielstand geladen wird, der noch 'twelveDataApiKey' enthält,
-  // löschen wir diese Eigenschaft direkt aus dem Speicher.
+  // 3. Alt-Rückstand entfernen
   if (typeof state.settings.twelveDataApiKey !== 'undefined') {
     delete state.settings.twelveDataApiKey;
   }
@@ -1798,18 +1802,22 @@ function parseAndLoadState(jsonStr) {
       if (typeof d.isinWkn === 'undefined') d.isinWkn = "";
       if (typeof d.bank === 'undefined') d.bank = "";
       
-      // Gesamtwert basierend auf Anzahl und aktuellem Preis berechnen
       d.value = d.anzahl * d.aktuellerPreis;
     });
   }
+
+  // 6. UI-Elemente und Tabellen mit den geladenen Daten befüllen
+  loadStateIntoInputs(); 
+  syncOwnerDropdowns(); 
+  applyDynamicNames(); 
+  renderAllTables(); 
+  renderSalaryComponents(); 
+  renderSalaryHistoryTables();
+  renderDepotHistoryTable(); 
+  renderAccountTrackerTable();
+  updateCalculationsAndCharts(); 
+  updateDepotTimestamp();
 }
-
-          loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
-          renderAllTables(); renderSalaryComponents(); renderSalaryHistoryTables();
-          renderDepotHistoryTable(); renderAccountTrackerTable();
-          updateCalculationsAndCharts(); updateDepotTimestamp();
-      }
-
       function saveToLocalStorage() { 
           const dataStr = JSON.stringify(state);
           if (window.appPassword) { localStorage.setItem('famfinanz_v11_state', CryptoJS.AES.encrypt(dataStr, window.appPassword).toString());
