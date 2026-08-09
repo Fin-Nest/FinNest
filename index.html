@@ -2573,6 +2573,84 @@ if (configKey === 'depot') {
           renderAccountTrackerTable();
       }
 
+    // Globaler Sortierzustand für den Kontotracker
+let accountTrackerSortState = {
+  column: 'bank',
+  direction: 'asc'
+};
+
+/**
+ * Sortiert die Einträge im Kontotracker nach der angeklickten Spalte.
+ * @param {string} column - Name der zu sortierenden Spalte aus dem HTML
+ */
+function sortAccountTracker(column) {
+  // 1. Sortierrichtung umschalten (aufsteigend <-> absteigend)
+  if (accountTrackerSortState.column === column) {
+    accountTrackerSortState.direction = accountTrackerSortState.direction === 'asc' ? 'desc' : 'asc';
+  } else {
+    accountTrackerSortState.column = column;
+    accountTrackerSortState.direction = 'asc';
+  }
+
+  if (!state.accountTracker || !Array.isArray(state.accountTracker) || state.accountTracker.length === 0) {
+    return;
+  }
+
+  const dir = accountTrackerSortState.direction === 'asc' ? 1 : -1;
+  const today = new Date();
+
+  // 2. Hilfsfunktion zur Ermittlung des passenden Vergleichswerts
+  function getSortValue(acc, col) {
+    switch (col) {
+      case 'bank':
+        return (acc.bank || '').toLowerCase();
+      case 'owner':
+        return (acc.owner || '').toLowerCase();
+      case 'startDate':
+      case 'openDate':
+        return acc.openDate ? new Date(acc.openDate).getTime() : 0;
+      case 'endDate':
+      case 'closeDate':
+        return acc.closeDate ? new Date(acc.closeDate).getTime() : 0;
+      case 'lockMonths':
+      case 'lockPeriodMonths':
+        return parseInt(acc.lockPeriodMonths) || 0;
+      case 'newCustomerDate': {
+        if (!acc.closeDate) return 0;
+        const d = new Date(acc.closeDate);
+        if (isNaN(d.getTime())) return 0;
+        d.setMonth(d.getMonth() + (parseInt(acc.lockPeriodMonths) || 12));
+        return d.getTime();
+      }
+      case 'status': {
+        if (!acc.closeDate) return 1; // 1 = Aktiv
+        const d = new Date(acc.closeDate);
+        if (isNaN(d.getTime())) return 1;
+        d.setMonth(d.getMonth() + (parseInt(acc.lockPeriodMonths) || 12));
+        return today >= d ? 3 : 2; // 2 = Sperrfrist, 3 = Wieder Neukunde!
+      }
+      default:
+        return (acc[col] || '').toString().toLowerCase();
+    }
+  }
+
+  // 3. Array im state sortieren
+  state.accountTracker.sort((a, b) => {
+    const valA = getSortValue(a, column);
+    const valB = getSortValue(b, column);
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return valA.localeCompare(valB) * dir;
+    }
+    if (valA < valB) return -1 * dir;
+    if (valA > valB) return 1 * dir;
+    return 0;
+  });
+
+  // 4. Tabelle neu aufbauen
+  renderAccountTrackerTable();
+}
+    
       function renderAccountTrackerTable() {
           const tbody = document.getElementById('account-tracker-table-body');
           if (!tbody) return;
