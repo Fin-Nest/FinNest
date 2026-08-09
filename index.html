@@ -2007,6 +2007,10 @@ if (secQ && secA) {
       }
 
       function exportStateToFile() {
+  // Zeitstempel des letzten Exports im State hinterlegen
+    if (!state.settings) state.settings = {};
+    state.settings.lastBackupTimestamp = new Date().toISOString();
+    saveToLocalStorage();
   // 1. Tagesaktuelles Datum im Format YYYY-MM-DD ermitteln
   const today = new Date().toISOString().split('T')[0];
   const fileName = `FinNest_backup_${today}.json`;
@@ -3347,7 +3351,26 @@ document.addEventListener('visibilitychange', () => {
         }, 100);
     }
 });
-    
+window.addEventListener('beforeunload', (event) => {
+    const lastBackup = state.settings?.lastBackupTimestamp;
+    let needsBackupWarning = false;
+
+    if (!lastBackup) {
+        needsBackupWarning = true;
+    } else {
+        const hoursSinceBackup = (new Date() - new Date(lastBackup)) / (1000 * 60 * 60);
+        // Beispiel: Warnen, wenn das letzte Backup älter als 24 Stunden ist
+        if (hoursSinceBackup > 24) {
+            needsBackupWarning = true;
+        }
+    }
+
+    if (needsBackupWarning) {
+        // Löst den Standard-Browser-Warn-Dialog vor dem Verlassen/Schließen aus
+        event.preventDefault();
+        event.returnValue = ''; 
+    }
+});    
   </script>
 </body>
 </html>
