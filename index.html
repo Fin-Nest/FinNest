@@ -1151,42 +1151,91 @@
               </div>
           </div>
 
-          <!-- TAB: KONTOTRACKER -->
-          <div id="tab-accountTracker" class="hidden space-y-8">
-              <div>
-                  <h2 class="text-2xl font-bold tracking-tight">Kontotracker (Tagesgeldhopping)</h2>
-                  <p class="text-slate-500">Übersicht über Kontoeinstellungen, Kündigungsfristen und automatische Neukunden-Statusberechnung.</p>
-              </div>
+         <!-- TAB: KONTOTRACKER -->
+<div id="tab-accountTracker" class="hidden space-y-8">
+    <div>
+        <h2 class="text-2xl font-bold tracking-tight">Kontotracker (Tagesgeldhopping)</h2>
+        <p class="text-slate-500">Übersicht über Kontoeinstellungen, Kündigungsfristen und automatische Neukunden-Statusberechnung.</p>
+    </div>
 
-              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                  <div class="flex justify-between items-center">
-                      <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
-                          <i data-lucide="landmark" class="text-indigo-600"></i> Tagesgeld- & Festgeldkonten Verwalten
-                      </h3>
-                      <button onclick="addTrackedAccount()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
-                          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Konto hinzufügen
-                      </button>
-                  </div>
-                  <div class="overflow-x-auto">
-                      <table class="w-full text-left border-collapse min-w-[850px]">
-                          <thead>
-                              <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
-                                  <th class="pb-3 font-medium">Bankinstitut</th>
-                                  <th class="pb-3 font-medium">Zuordnung</th>
-                                  <th class="pb-3 font-medium">Eröffnungsdatum</th>
-                                  <th class="pb-3 font-medium">Kündigungsdatum</th>
-                                  <th class="pb-3 font-medium w-28">Sperrfrist (Mo.)</th>
-                                  <th class="pb-3 font-medium">Wieder Neukunde ab</th>
-                                  <th class="pb-3 font-medium">Status</th>
-                                  <th class="pb-3 text-right">Aktion</th>
-                              </tr>
-                          </thead>
-                          <tbody id="account-tracker-table-body"></tbody>
-                      </table>
-                  </div>
-              </div>
-          </div>
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                <i data-lucide="landmark" class="text-indigo-600"></i> Tagesgeld- & Festgeldkonten Verwalten
+            </h3>
+            <button onclick="addTrackedAccount()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Konto hinzufügen
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[850px]">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                        
+                        <!-- Bankinstitut -->
+                        <th onclick="sortAccountTracker('bank')" class="pb-3 font-medium cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Bankinstitut
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
 
+                        <!-- Zuordnung -->
+                        <th onclick="sortAccountTracker('owner')" class="pb-3 font-medium cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Zuordnung
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
+
+                        <!-- Eröffnungsdatum -->
+                        <th onclick="sortAccountTracker('startDate')" class="pb-3 font-medium cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Eröffnungsdatum
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
+
+                        <!-- Kündigungsdatum -->
+                        <th onclick="sortAccountTracker('endDate')" class="pb-3 font-medium cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Kündigungsdatum
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
+
+                        <!-- Sperrfrist -->
+                        <th onclick="sortAccountTracker('lockMonths')" class="pb-3 font-medium w-28 cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Sperrfrist (Mo.)
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
+
+                        <!-- Wieder Neukunde ab -->
+                        <th onclick="sortAccountTracker('newCustomerDate')" class="pb-3 font-medium cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Wieder Neukunde ab
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
+
+                        <!-- Status -->
+                        <th onclick="sortAccountTracker('status')" class="pb-3 font-medium cursor-pointer hover:text-slate-600 transition-colors select-none">
+                            <div class="flex items-center gap-1">
+                                Status
+                                <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </th>
+
+                        <th class="pb-3 text-right font-medium">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="account-tracker-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
           <!-- TAB: PERSONALISIERUNG (PUNKT 6: Inkl. Sicherheitsfrage) -->
           <div id="tab-settings" class="hidden space-y-8">
               <div>
@@ -1627,6 +1676,66 @@ function triggerMobileChartRender() {
           }
       }
 
+// Speichert den aktuellen Sortierzustand für den Tagesgeldtracker
+let tagesgeldSortState = {
+  column: 'name',  // Standard-Spalte für die Sortierung
+  direction: 'asc' // 'asc' für aufsteigend, 'desc' für absteigend
+};
+
+/**
+ * Sortiert das Tagesgeld-Array im 'state'-Objekt nach der ausgewählten Spalte.
+ * Verarbeitet sowohl Text (Namen, Banken) als auch Zahlen (Beträge, Zinsen).
+ *
+ * @param {string} column - Der Name der Spalte (z. B. 'name', 'bank', 'value', 'zins')
+ */
+function sortTagesgeld(column) {
+  // 1. Umschalten der Sortierrichtung bei erneutem Klick auf dieselbe Spalte
+  if (tagesgeldSortState.column === column) {
+    tagesgeldSortState.direction = tagesgeldSortState.direction === 'asc' ? 'desc' : 'asc';
+  } else {
+    tagesgeldSortState.column = column;
+    tagesgeldSortState.direction = 'asc';
+  }
+
+  // 2. Zugriff auf das Tagesgeld-Array im state absichern
+  const tagesgeldList = state.assets?.tagesgeld || state.tagesgeld;
+  if (!tagesgeldList || !Array.isArray(tagesgeldList) || tagesgeldList.length === 0) {
+    return;
+  }
+
+  // 3. Sortierung durchführen
+  tagesgeldList.sort((a, b) => {
+    let valA = a[column];
+    let valB = b[column];
+
+    // Alphabetischer Vergleich für Textfelder (z. B. Konto-Name, Bank)
+    if (typeof valA === 'string' || typeof valB === 'string') {
+      valA = String(valA || '').toLowerCase();
+      valB = String(valB || '').toLowerCase();
+      return tagesgeldSortState.direction === 'asc'
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+
+    // Numerischer Vergleich für Geldbeträge und Zinssätze (Komma-sicher!)
+    valA = parseEuroInput(valA);
+    valB = parseEuroInput(valB);
+    return tagesgeldSortState.direction === 'asc' ? valA - valB : valB - valA;
+  });
+
+  // 4. Tabelle im UI neu zeichnen
+  if (typeof renderTagesgeldTable === 'function') {
+    renderTagesgeldTable();
+  } else if (typeof updateCalculationsAndCharts === 'function') {
+    updateCalculationsAndCharts();
+  }
+
+  // Lucide-Icons erneuern, falls im Projekt vorhanden
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
+}
+    
       /**
  * Parst den gespeicherten JSON-String und stellt sicher, dass alle
  * erforderlichen Datenstrukturen und Abwärtskompatibilitäten im 'state' vorhanden sind.
