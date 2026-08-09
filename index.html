@@ -1807,10 +1807,21 @@ function triggerMobileChartRender() {
       }
 
       function exportStateToFile() {
-          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-          const downloadAnchor = document.createElement('a'); downloadAnchor.setAttribute("href", dataStr);
-          downloadAnchor.setAttribute("download", `famfinanz_backup.json`); document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
-      }
+  // 1. Tagesaktuelles Datum im Format YYYY-MM-DD ermitteln
+  const today = new Date().toISOString().split('T')[0];
+  const fileName = `FinNest_backup_${today}.json`;
+
+  // 2. Anwendungszustand (state) als JSON aufbereiten
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+  
+  // 3. Virtuellen Link erstellen und Download ausführen
+  const downloadAnchor = document.createElement('a'); 
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", fileName); 
+  document.body.appendChild(downloadAnchor); 
+  downloadAnchor.click(); 
+  downloadAnchor.remove();
+}
 
       function importStateFromFile(event) {
           const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
