@@ -2152,7 +2152,7 @@ if (secQ && secA) {
           ['husband', 'wife'].forEach(owner => {
               const tbody = owner === 'husband' ? hBody : wBody;
               state.salaryHistory[owner].forEach((entry, idx) => {
-                  const total = entry.components.reduce((s, c) => s + c.value, 0); const compDesc = entry.components.map(c => `${c.name}: ${formatEuroDisplay(c.value)}€`).join(', '); const endStr = entry.end ? entry.end : 'Heute';
+                  const total = entry.components.reduce((s, c) => s + c.value, 0); const compDesc = entry.components.map(c => `${escapeHTML(c.name)}: ${formatEuroDisplay(c.value)}€`).join(', '); const endStr = entry.end ? entry.end : 'Heute';
                   const btnEdit = `<button onclick="editSalaryEntry('${owner}', ${idx})" class="text-indigo-400 hover:text-indigo-600 p-1 mr-1"><i data-lucide="edit-2" class="w-4 h-4"></i></button>`;
                   const tr = document.createElement('tr'); tr.className = 'border-b border-slate-100';
                   tr.innerHTML = `<td class="py-2">${escapeHTML(entry.start)} - ${escapeHTML(endStr)}</td><td class="py-2 font-medium">${escapeHTML(entry.company)}</td><td class="py-2 text-[10px] text-slate-500 max-w-[200px] truncate" title="${compDesc}\n${escapeHTML(entry.comment)}">${compDesc} <br><span class="italic">${escapeHTML(entry.comment)}</span></td><td class="py-2 text-right font-semibold text-indigo-700">${formatEuroDisplay(total)} €</td><td class="py-2 text-right">${btnEdit}<button onclick="deleteSalaryEntry('${owner}', ${idx})" class="text-rose-400 hover:text-rose-600 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
