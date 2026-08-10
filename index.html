@@ -3522,7 +3522,38 @@ window.addEventListener('beforeunload', (event) => {
         event.preventDefault();
         event.returnValue = ''; 
     }
-});    
+});   
+
+/**
+ * Registriert den Service Worker, prüft auf neue Versionen und führt bei
+ * einem Update automatisch einen einmaligen Refresh durch.
+ */
+function initServiceWorkerAutoUpdate() {
+  if ('serviceWorker' in navigator) {
+    
+    // Service Worker registrieren
+    navigator.serviceWorker.register('./sw.js').then((registration) => {
+      // Erzwingt bei jedem Laden die Prüfung, ob die sw.js auf dem Server neu ist
+      registration.update();
+    }).catch((err) => {
+      console.error('[App] Service Worker Registrierungsfehler:', err);
+    });
+
+    // Event-Listener: Wenn ein neuer Service Worker übernimmt (controllerchange)
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        console.log('[App] Neue Version erkannt! Seite wird automatisch neu geladen...');
+        window.location.reload();
+      }
+    });
+  }
+}
+
+// Skript ausführen, sobald die Seite vollständig geladen ist
+window.addEventListener('load', initServiceWorkerAutoUpdate);
+    
   </script>
 </body>
 </html>
