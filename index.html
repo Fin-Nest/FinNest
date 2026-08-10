@@ -267,155 +267,158 @@
       <main class="flex-1 overflow-y-auto p-4 md:p-10 relative">
           
           <!-- TAB: DASHBOARD -->
-          <div id="tab-dashboard" class="space-y-8">
-              <div>
-                  <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Finanz-Dashboard</h1>
-                  <p class="text-slate-500 mt-1 text-sm md:text-base">Lokal gesicherte Haushalts- und Vermögenswerte mit Eigentums-Splitting.</p>
-              </div>
-
-              <!-- KPI GRID -->
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 dashboard-kpi-grid">
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break">
-                      <div class="flex justify-between items-center text-slate-400 mb-2">
-                          <span class="text-sm font-medium">Gesamt-Einnahmen (Monat)</span>
-                          <i data-lucide="trending-up" class="w-5 h-5 text-emerald-500"></i>
-                      </div>
-                      <span id="kpi-income" class="text-2xl font-bold text-emerald-500">0,00 €</span>
-                  </div>
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break">
-                      <div class="flex justify-between items-center text-slate-400 mb-2">
-                          <span class="text-sm font-medium">Gesamt-Ausgaben (Monat)</span>
-                          <i data-lucide="trending-down" class="w-5 h-5 text-rose-500"></i>
-                      </div>
-                      <span id="kpi-expenses" class="text-2xl font-bold text-rose-500">0,00 €</span>
-                  </div>
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break bg-indigo-50/50">
-                      <div class="flex justify-between items-center text-indigo-500 mb-2">
-                          <span class="text-sm font-bold" id="kpi-assets-label">Nettovermögen (Gesamt)</span>
-                          <i data-lucide="landmark" class="w-5 h-5"></i>
-                      </div>
-                      <span id="kpi-assets" class="text-2xl font-bold text-indigo-900">0,00 €</span>
-                  </div>
-              </div>
-
-              <!-- SPLIT TABLE -->
-              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
-                  <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Finanzübersicht</h3>
-                  <div class="overflow-x-auto">
-                      <table class="w-full text-left text-sm border-collapse min-w-[500px]">
-                          <thead>
-                              <tr class="border-b border-slate-200 text-slate-400 font-medium text-xs bg-slate-50/50">
-                                  <th class="p-3">Finanzsektor</th>
-                                  <th class="p-3 text-right text-indigo-600 font-semibold bg-indigo-50/30 rounded-t-lg"><span class="lbl-husband-name">Ehemann</span></th>
-                                  <th class="p-3 text-right text-emerald-600 font-semibold bg-emerald-50/30 rounded-t-lg"><span class="lbl-wife-name">Ehefrau</span></th>
-                                  <th class="p-3 text-right text-slate-600 font-semibold bg-slate-100/50 rounded-t-lg">Gemeinsame Töpfe</th>
-                              </tr>
-                          </thead>
-                          <tbody class="divide-y divide-slate-100">
-                              <tr>
-                                  <td class="p-3 font-medium text-slate-600">Monatliche Einnahmen</td>
-                                  <td id="split-inc-husband" class="p-3 text-right font-semibold bg-indigo-50/10">0,00 €</td>
-                                  <td id="split-inc-wife" class="p-3 text-right font-semibold bg-emerald-50/10">0,00 €</td>
-                                  <td id="split-inc-both" class="p-3 text-right font-semibold bg-slate-50/30">0,00 €</td>
-                              </tr>
-                              <tr>
-                                  <td class="p-3 font-medium text-slate-600">Monatliche Ausgaben</td>
-                                  <td id="split-exp-husband" class="p-3 text-right font-semibold text-rose-600 bg-indigo-50/10">0,00 €</td>
-                                  <td id="split-exp-wife" class="p-3 text-right font-semibold text-rose-600 bg-emerald-50/10">0,00 €</td>
-                                  <td id="split-exp-both" class="p-3 text-right font-semibold text-rose-600 bg-slate-50/30">0,00 €</td>
-                              </tr>
-                              <tr class="bg-slate-50/30">
-                                  <td class="p-3 font-medium text-slate-600">Brutto-Vermögen (Assets)</td>
-                                  <td id="split-ast-husband" class="p-3 text-right font-medium text-slate-700 bg-indigo-50/20">0,00 €</td>
-                                  <td id="split-ast-wife" class="p-3 text-right font-medium text-slate-700 bg-emerald-50/20">0,00 €</td>
-                                  <td id="split-ast-both" class="p-3 text-right font-medium text-slate-700 bg-slate-100/50">0,00 €</td>
-                              </tr>
-                              <tr class="bg-rose-50/10">
-                                  <td class="p-3 font-medium text-slate-600">Verbindlichkeiten (Schulden)</td>
-                                  <td id="split-lia-husband" class="p-3 text-right font-medium text-rose-600 bg-indigo-50/20">0,00 €</td>
-                                  <td id="split-lia-wife" class="p-3 text-right font-medium text-rose-600 bg-emerald-50/20">0,00 €</td>
-                                  <td id="split-lia-both" class="p-3 text-right font-medium text-rose-600 bg-slate-100/50">0,00 €</td>
-                              </tr>
-                              <tr class="bg-indigo-50/20 border-t-2 border-indigo-100">
-                                  <td class="p-3 font-bold text-indigo-900">Reinvermögen (Net Worth)</td>
-                                  <td id="split-net-husband" class="p-3 text-right font-bold text-indigo-900 bg-indigo-50/40 rounded-b-lg">0,00 €</td>
-                                  <td id="split-net-wife" class="p-3 text-right font-bold text-indigo-900 bg-emerald-50/40 rounded-b-lg">0,00 €</td>
-                                  <td id="split-net-both" class="p-3 text-right font-bold text-indigo-900 bg-indigo-100/40 rounded-b-lg">0,00 €</td>
-                              </tr>
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-
-            <!-- KACHEL: DEPOT-PERFORMANCE NACH PERSONEN & FAMILIE -->
-<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
-    <div class="flex justify-between items-center">
-        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <i data-lucide="trending-up" class="w-4 h-4 text-indigo-600"></i> Depot-Performance (Entwicklung seit Kauf)
-        </h3>
+<div id="tab-dashboard" class="space-y-8">
+    <div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Finanz-Dashboard</h1>
+        <p class="text-slate-500 mt-1 text-sm md:text-base">Lokal gesicherte Haushalts- und Vermögenswerte mit Eigentums-Splitting.</p>
     </div>
-    
-    <!-- 5-Spalten-Grid (Mobile: 1 Spalte, Tablet: 2 Spalten, Desktop: 5 Spalten) -->
-    <div id="depot-performance-person-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <!-- Dynamisch via JavaScript befüllt -->
+
+    <!-- 1. KPI GRID (3 Kacheln) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 dashboard-kpi-grid">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break">
+            <div class="flex justify-between items-center text-slate-400 mb-2">
+                <span class="text-sm font-medium">Gesamt-Einnahmen (Monat)</span>
+                <i data-lucide="trending-up" class="w-5 h-5 text-emerald-500"></i>
+            </div>
+            <span id="kpi-income" class="text-2xl font-bold text-emerald-500">0,00 €</span>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break">
+            <div class="flex justify-between items-center text-slate-400 mb-2">
+                <span class="text-sm font-medium">Gesamt-Ausgaben (Monat)</span>
+                <i data-lucide="trending-down" class="w-5 h-5 text-rose-500"></i>
+            </div>
+            <span id="kpi-expenses" class="text-2xl font-bold text-rose-500">0,00 €</span>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm avoid-break bg-indigo-50/50">
+            <div class="flex justify-between items-center text-indigo-500 mb-2">
+                <span class="text-sm font-bold" id="kpi-assets-label">Nettovermögen (Gesamt)</span>
+                <i data-lucide="landmark" class="w-5 h-5"></i>
+            </div>
+            <span id="kpi-assets" class="text-2xl font-bold text-indigo-900">0,00 €</span>
+        </div>
+    </div>
+
+    <!-- 2. FINANZÜBERSICHT TABELLE -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Finanzübersicht</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse min-w-[500px]">
+                <thead>
+                    <tr class="border-b border-slate-200 text-slate-400 font-medium text-xs bg-slate-50/50">
+                        <th class="p-3">Finanzsektor</th>
+                        <th class="p-3 text-right text-indigo-600 font-semibold bg-indigo-50/30 rounded-t-lg"><span class="lbl-husband-name">Ehemann</span></th>
+                        <th class="p-3 text-right text-emerald-600 font-semibold bg-emerald-50/30 rounded-t-lg"><span class="lbl-wife-name">Ehefrau</span></th>
+                        <th class="p-3 text-right text-slate-600 font-semibold bg-slate-100/50 rounded-t-lg">Gemeinsame Töpfe</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr>
+                        <td class="p-3 font-medium text-slate-600">Monatliche Einnahmen</td>
+                        <td id="split-inc-husband" class="p-3 text-right font-semibold bg-indigo-50/10">0,00 €</td>
+                        <td id="split-inc-wife" class="p-3 text-right font-semibold bg-emerald-50/10">0,00 €</td>
+                        <td id="split-inc-both" class="p-3 text-right font-semibold bg-slate-50/30">0,00 €</td>
+                    </tr>
+                    <tr>
+                        <td class="p-3 font-medium text-slate-600">Monatliche Ausgaben</td>
+                        <td id="split-exp-husband" class="p-3 text-right font-semibold text-rose-600 bg-indigo-50/10">0,00 €</td>
+                        <td id="split-exp-wife" class="p-3 text-right font-semibold text-rose-600 bg-emerald-50/10">0,00 €</td>
+                        <td id="split-exp-both" class="p-3 text-right font-semibold text-rose-600 bg-slate-50/30">0,00 €</td>
+                    </tr>
+                    <tr class="bg-slate-50/30">
+                        <td class="p-3 font-medium text-slate-600">Brutto-Vermögen (Assets)</td>
+                        <td id="split-ast-husband" class="p-3 text-right font-medium text-slate-700 bg-indigo-50/20">0,00 €</td>
+                        <td id="split-ast-wife" class="p-3 text-right font-medium text-slate-700 bg-emerald-50/20">0,00 €</td>
+                        <td id="split-ast-both" class="p-3 text-right font-medium text-slate-700 bg-slate-100/50">0,00 €</td>
+                    </tr>
+                    <tr class="bg-rose-50/10">
+                        <td class="p-3 font-medium text-slate-600">Verbindlichkeiten (Schulden)</td>
+                        <td id="split-lia-husband" class="p-3 text-right font-medium text-rose-600 bg-indigo-50/20">0,00 €</td>
+                        <td id="split-lia-wife" class="p-3 text-right font-medium text-rose-600 bg-emerald-50/20">0,00 €</td>
+                        <td id="split-lia-both" class="p-3 text-right font-medium text-rose-600 bg-slate-100/50">0,00 €</td>
+                    </tr>
+                    <tr class="bg-indigo-50/20 border-t-2 border-indigo-100">
+                        <td class="p-3 font-bold text-indigo-900">Reinvermögen (Net Worth)</td>
+                        <td id="split-net-husband" class="p-3 text-right font-bold text-indigo-900 bg-indigo-50/40 rounded-b-lg">0,00 €</td>
+                        <td id="split-net-wife" class="p-3 text-right font-bold text-indigo-900 bg-emerald-50/40 rounded-b-lg">0,00 €</td>
+                        <td id="split-net-both" class="p-3 text-right font-bold text-indigo-900 bg-indigo-100/40 rounded-b-lg">0,00 €</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. HAUPT-GRID FÜR DIAGRAMME & PERFORMANCES -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 dashboard-chart-grid">
+        
+        <!-- ZEILE 1: Cashflow (Links) & Kostenübersicht (Rechts) -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Monatlicher Cashflow</h3>
+            <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                <canvas id="chartCashflow"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Kostenübersicht (Monat)</h3>
+            <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                <canvas id="chartExpenseStructure"></canvas>
+            </div>
+        </div>
+
+        <!-- ZEILE 2: Vermögensübersicht (Links) & Gesamtausgaben Kinder (Rechts) -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Vermögensübersicht</h3>
+            <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                <canvas id="chartAssetAllocation"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Gesamtausgaben Kinder (<span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span>)</h3>
+            <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                <canvas id="chartChildren"></canvas>
+                <div id="chartChildrenEmptyMsg" class="hidden absolute inset-0 flex items-center justify-center text-xs text-slate-400 font-medium">Bisher keine Kinder-Ausgaben verbucht</div>
+            </div>
+        </div>
+
+        <!-- ZEILE 3: Neue Depot-Performance Kachel (VOLLE BREITE via lg:col-span-2) -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break lg:col-span-2">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-4 h-4 text-indigo-600"></i> Depot-Performance (Entwicklung seit Kauf)
+                </h3>
+            </div>
+            <div id="depot-performance-person-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Dynamisch via JavaScript befüllt -->
+            </div>
+        </div>
+
+        <!-- ZEILE 4: Depotwert nach Personen (Links) & Realisierter Gewinn/Verlust (Rechts) -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depotwert nach Personen (Aufschlüsselung & Gewichtung)</h3>
+            <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                <canvas id="chartDepotOwnerComparison"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[320px] avoid-break">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Wertpapier-Gewinn / Verlust (Laufzeit)</h3>
+            <div id="realized-gains-widget-container" class="flex-1 flex flex-col justify-between space-y-3">
+                <!-- Dynamisch befüllt via JS -->
+            </div>
+        </div>
+
+        <!-- ZEILE 5: Historische Gehaltsentwicklung (VOLLE BREITE via lg:col-span-2) -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break lg:col-span-2">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Historische Gehaltsentwicklung (Brutto)</h3>
+            <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
+                <canvas id="chartSalaryHistory"></canvas>
+            </div>
+        </div>
+
     </div>
 </div>
-
-              <!-- CHARTS -->
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 dashboard-chart-grid">
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Monatlicher Cashflow</h3>
-                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartCashflow"></canvas>
-                      </div>
-                  </div>
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Kostenübersicht (Monat)</h3>
-                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartExpenseStructure"></canvas>
-                      </div>
-                  </div>
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Vermögensübersicht</h3>
-                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartAssetAllocation"></canvas>
-                      </div>
-                  </div>
-                  
-                  <!-- PUNKT 1: Gestapeltes Depot-Diagramm (Sortiert: Größter Wert unten) -->
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Depotwert nach Personen (Aufschlüsselung & Gewichtung)</h3>
-                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartDepotOwnerComparison"></canvas>
-                      </div>
-                  </div>
-
-                  <!-- Realisierter Gewinn / Verlust Widget -->
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[320px] avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Realisierter Wertpapier-Gewinn / Verlust (Laufzeit)</h3>
-                      <div id="realized-gains-widget-container" class="flex-1 flex flex-col justify-between space-y-3">
-                          <!-- Dynamisch befüllt via JS -->
-                      </div>
-                  </div>
-
-                  <!-- PUNKT 3: Gesamtausgaben Kinder als Stacked Bar Chart -->
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Gesamtausgaben Kinder (<span class="lbl-child1-name">Kind 1</span> & <span class="lbl-child2-name">Kind 2</span>)</h3>
-                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartChildren"></canvas>
-                          <div id="chartChildrenEmptyMsg" class="hidden absolute inset-0 flex items-center justify-center text-xs text-slate-400 font-medium">Bisher keine Kinder-Ausgaben verbucht</div>
-                      </div>
-                  </div>
-
-                  <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break lg:col-span-2">
-                      <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Historische Gehaltsentwicklung (Brutto)</h3>
-                      <div class="relative flex-1 flex items-center justify-center min-h-0 w-full">
-                          <canvas id="chartSalaryHistory"></canvas>
-                      </div>
-                  </div>
-              </div>
-          </div>
-
+             
           <!-- TAB: EINNAHMEN -->
           <div id="tab-income" class="hidden space-y-8">
               <div>
