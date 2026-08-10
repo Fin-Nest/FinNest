@@ -347,6 +347,20 @@
                   </div>
               </div>
 
+            <!-- KACHEL: DEPOT-PERFORMANCE NACH PERSONEN & FAMILIE -->
+<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 avoid-break">
+    <div class="flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-indigo-600"></i> Depot-Performance (Entwicklung seit Kauf)
+        </h3>
+    </div>
+    
+    <!-- 5-Spalten-Grid (Mobile: 1 Spalte, Tablet: 2 Spalten, Desktop: 5 Spalten) -->
+    <div id="depot-performance-person-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Dynamisch via JavaScript befüllt -->
+    </div>
+</div>
+
               <!-- CHARTS -->
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 dashboard-chart-grid">
                   <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between h-80 avoid-break">
@@ -1827,6 +1841,7 @@ function parseAndLoadState(jsonStr) {
   renderAccountTrackerTable();
   updateCalculationsAndCharts(); 
   updateDepotTimestamp();
+  renderDepotPersonPerformance();
 }
       function saveToLocalStorage() { 
           const dataStr = JSON.stringify(state);
@@ -1901,13 +1916,29 @@ if (secQ && secA) {
           if(document.getElementById('opt-child2-label')) document.getElementById('opt-child2-label').innerText = names.child2;
       }
 
-      function handleNameChange() {
-          state.settings.names.husband = document.getElementById('set-name-husband').value.trim() || "Ehemann";
-          state.settings.names.wife = document.getElementById('set-name-wife').value.trim() || "Ehefrau";
-          state.settings.names.child1 = document.getElementById('set-name-child1').value.trim() || "Kind 1";
-          state.settings.names.child2 = document.getElementById('set-name-child2').value.trim() || "Kind 2";
-          saveToLocalStorage(); applyDynamicNames(); syncOwnerDropdowns(); updateCalculationsAndCharts(); renderSalaryChart(); renderAllTables();
-      }
+    /**
+ * Liest die geänderten Personennamen aus den Einstellungen ein,
+ * speichert diese lokal und aktualisiert alle UI-Elemente, Tabellen
+ * und Dashboard-Kacheln reaktiv.
+ */
+function handleNameChange() {
+  // 1. Namen aus den Eingabefeldern im State aktualisieren (mit Fallback-Werten)
+  state.settings.names.husband = document.getElementById('set-name-husband').value.trim() || "Ehemann";
+  state.settings.names.wife = document.getElementById('set-name-wife').value.trim() || "Ehefrau";
+  state.settings.names.child1 = document.getElementById('set-name-child1').value.trim() || "Kind 1";
+  state.settings.names.child2 = document.getElementById('set-name-child2').value.trim() || "Kind 2";
+
+  // 2. Aktualisierten State im LocalStorage / Tresor speichern
+  saveToLocalStorage();
+
+  // 3. UI-Komponenten und Diagramme reaktiv neu zeichnen
+  applyDynamicNames();
+  syncOwnerDropdowns();
+  updateCalculationsAndCharts();
+  renderSalaryChart();
+  renderAllTables();
+  renderDepotPersonPerformance();
+}
 
       function updateTaxSetting() { state.settings.applyCapitalGainsTax = document.getElementById('set-tax-cg').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
       function toggleImmoEK() { state.settings.includeImmoInEK = document.getElementById('immo-ek-toggle').checked; saveToLocalStorage(); updateCalculationsAndCharts(); }
@@ -3052,9 +3083,127 @@ async function updateDepotPrices() {
           state.calculated = { mtlIncome: mtlIncome, mtlExpenses: mtlExpenses };
           renderChildTrackerTables();
           renderRealizedGainsWidget();
+        renderDepotPersonPerformance();
           if(!document.getElementById('app-wrapper').classList.contains('hidden')) { initCharts(); initWealthProjectionChart(); updateThCalculations(); }
+        
       }
 
+/**
+ * Berechnet und rendert die Wertpapier-Performance (Gewinn/Verlust gegenüber Kaufpreis)
+ * getrennt für die 4 Personen sowie als Gesamtsumme für die Familie.
+ */
+function renderDepotPersonPerformance() {
+    const container = document.getElementById('depot-performance-person-grid');
+    if (!container) return;
+
+    const names = state.settings.names || {};
+    const persons = [
+        { key: 'husband', label: names.husband || 'Ehemann' },
+        { key: 'wife', label: names.wife || 'Ehefrau' },
+        { key: 'child1', label: names.child1 || 'Kind 1' },
+        { key: 'child2', label: names.child2 || 'Kind 2' }
+    ];
+
+    // Datenstrukturen für Kaufwerte (cost) und aktuelle Werte (val)
+    const stats = {
+        husband: { cost: 0, val: 0 },
+        wife: { cost: 0, val: 0 },
+        child1: { cost: 0, val: 0 },
+        child2: { cost: 0, val: 0 },
+        familyTotal: { cost: 0, val: 0 }
+    };
+
+    // Gesamtes Depot durchlaufen und Summen berechnen
+    if (state.depot && Array.isArray(state.depot)) {
+        state.depot.forEach(item => {
+            const count = item.anzahl || 0;
+            const buyPrice = item.kaufpreis || 0;
+            const curPrice = item.aktuellerPreis || 0;
+
+            const itemCost = count * buyPrice;
+            const itemVal = count * curPrice;
+
+            // 1. Alle Wertpapiere (auch "both") fließen in die Familie ein
+            stats.familyTotal.cost += itemCost;
+            stats.familyTotal.val += itemVal;
+
+            // 2. Den einzelnen Personen zuordnen
+            if (stats[item.owner]) {
+                stats[item.owner].cost += itemCost;
+                stats[item.owner].val += itemVal;
+            }
+        });
+    }
+
+    let html = '';
+
+    // HTML für die 4 Einzelpersonen generieren
+    persons.forEach(p => {
+        const s = stats[p.key];
+        const diff = s.val - s.cost;
+        const pct = s.cost > 0 ? (diff / s.cost) * 100 : 0;
+
+        html += createPerformanceCardBoxHtml(p.label, s.val, diff, pct, false);
+    });
+
+    // HTML für die Gesamtfamilie generieren
+    const fam = stats.familyTotal;
+    const famDiff = fam.val - fam.cost;
+    const famPct = fam.cost > 0 ? (famDiff / fam.cost) * 100 : 0;
+
+    html += createPerformanceCardBoxHtml('Gesamt Familie', fam.val, famDiff, famPct, true);
+
+    container.innerHTML = html;
+    
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Hilfsfunktion zum Erstellen des HTML-Codes einer einzelnen Performance-Box
+ */
+function createPerformanceCardBoxHtml(title, currentVal, diff, pct, isTotal) {
+    let colorClass = 'text-slate-800';
+    let bgClass = 'bg-slate-50 border-slate-200';
+    let badgeBg = 'bg-slate-200 text-slate-700';
+    let sign = '';
+
+    // Farbkodierung gemäß CI
+    if (diff > 0) {
+        colorClass = 'text-emerald-600';
+        bgClass = isTotal ? 'bg-emerald-50/90 border-emerald-300' : 'bg-emerald-50/40 border-emerald-200';
+        badgeBg = 'bg-emerald-100 text-emerald-800';
+        sign = '+';
+    } else if (diff < 0) {
+        colorClass = 'text-rose-600';
+        bgClass = isTotal ? 'bg-rose-50/90 border-rose-300' : 'bg-rose-50/40 border-rose-200';
+        badgeBg = 'bg-rose-100 text-rose-800';
+    } else {
+        if (isTotal) {
+            bgClass = 'bg-indigo-50/50 border-indigo-200';
+        }
+    }
+
+    const ringEffect = isTotal ? 'ring-2 ring-indigo-500/20' : '';
+
+    return `
+        <div class="p-4 rounded-xl border ${bgClass} ${ringEffect} flex flex-col justify-between space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-600 truncate mr-1" title="${escapeHTML(title)}">${escapeHTML(title)}</span>
+                ${isTotal ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-600 text-white uppercase tracking-wider">Familie</span>' : ''}
+            </div>
+            <div>
+                <div class="text-xs text-slate-400 font-medium mb-0.5">Depotwert: <strong class="text-slate-700">${formatEuroDisplay(currentVal)} €</strong></div>
+                <div class="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                    <span class="text-sm font-extrabold ${colorClass}">${sign}${formatEuroDisplay(diff)} €</span>
+                    <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full ${badgeBg}">${sign}${formatEuroDisplay(pct)} %</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+    
       function renderRealizedGainsWidget() {
           const container = document.getElementById('realized-gains-widget-container');
           if (!container) return;
