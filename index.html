@@ -2143,41 +2143,132 @@ function handleNameChange() {
           saveToLocalStorage(); updateCalculationsAndCharts();
       }
 
-      function exportStateToFile() {
-  // Zeitstempel des letzten Exports im State hinterlegen
+      /**
+ * Exportiert die Anwendungsdaten. Verschlüsselt die Datei automatisch,
+ * falls ein Masterpasswort aktiv ist.
+ */
+async function exportStateToFile() {
     if (!state.settings) state.settings = {};
     state.settings.lastBackupTimestamp = new Date().toISOString();
-    saveToLocalStorage();
-  // 1. Tagesaktuelles Datum im Format YYYY-MM-DD ermitteln
-  const today = new Date().toISOString().split('T')[0];
-  const fileName = `FinNest_backup_${today}.json`;
+    await saveToLocalStorage();
 
-  // 2. Anwendungszustand (state) als JSON aufbereiten
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-  
-  // 3. Virtuellen Link erstellen und Download ausführen
-  const downloadAnchor = document.createElement('a'); 
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", fileName); 
-  document.body.appendChild(downloadAnchor); 
-  downloadAnchor.click(); 
-  downloadAnchor.remove();
+    const today = new Date().toISOString().split('T')[0];
+    let fileData = "";
+    let fileName = "";
+
+    if (window.appPassword) {
+        // 1. Daten verschlüsseln, wenn ein Masterpasswort aktiv ist
+        const plainJson = JSON.stringify(state, null, 2);
+        const encryptedPayload = await encryptWithWebCrypto(plainJson, window.appPassword);
+        
+        const backupPackage = {
+            version: "v11",
+            encrypted: true,
+            payload: encryptedPayload
+        };
+        fileData = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPackage, null, 2));
+        fileName = `FinNest_backup_encrypted_${today}.json`;
+    } else {
+        // 2. Unverschlüsseltes Backup erstellen
+        const backupPackage = {
+            version: "v11",
+            encrypted: false,
+            data: state
+        };
+        fileData = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPackage, null, 2));
+        fileName = `FinNest_backup_${today}.json`;
+    }
+
+    const downloadAnchor = document.createElement('a'); 
+    downloadAnchor.setAttribute("href", fileData);
+    downloadAnchor.setAttribute("download", fileName); 
+    document.body.appendChild(downloadAnchor); 
+    downloadAnchor.click(); 
+    downloadAnchor.remove();
 }
 
-      function importStateFromFile(event) {
-          const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
-          reader.onload = function(e) {
-              try {
-                  const parsed = JSON.parse(e.target.result);
-                  if (!parsed || typeof parsed !== 'object' || !parsed.settings || !parsed.income) { alert("Fehler: Die Datei hat keine gültige FamFinanz-Struktur."); return; }
-                  state = parsed; saveToLocalStorage(); loadStateIntoInputs(); syncOwnerDropdowns(); applyDynamicNames(); 
-                  renderAllTables(); renderSalaryHistoryTables(); renderDepotHistoryTable(); renderAccountTrackerTable(); updateCalculationsAndCharts(); renderSalaryChart(); updateDepotTimestamp();
-                  alert("Backup erfolgreich eingelesen!");
-              } catch(err) { alert("Fehler beim Lesen der Datei."); }
-          };
-          reader.readAsText(file);
-      }
+/**
+ * Importiert Backup-Dateien, prüft den Verschlüsselungsstatus
+ * und fragt bei Bedarf das Masterpasswort ab.
+ */
+async function importStateFromFile(event) {
+    const file = event.target.files[0]; 
+    if (!file) return; 
 
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const rawContent = e.target.result;
+            const parsedFile = JSON.parse(rawContent);
+            let importedState = null;
+
+            // FALL 1: Verschlüsseltes Backup
+            if (parsedFile.encrypted && parsedFile.payload) {
+                let password = window.appPassword;
+
+                // Falls die App gesperrt ist oder kein Passwort im Speicher liegt
+                if (!password) {
+                    password = prompt("Diese Backup-Datei ist passwortgeschützt. Bitte gib das Masterpasswort ein:");
+                    if (!password) return; 
+                }
+
+                try {
+                    const decryptedJson = await smartDecrypt(parsedFile.payload, password);
+                    importedState = JSON.parse(decryptedJson);
+                    window.appPassword = password; // Passwort für die laufende Sitzung übernehmen
+                } catch (decryptErr) {
+                    alert("Entschlüsselung fehlgeschlagen! Das eingegebene Passwort ist falsch.");
+                    return;
+                }
+            } 
+            // FALL 2: Unverschlüsseltes neues Paket-Format
+            else if (parsedFile.encrypted === false && parsedFile.data) {
+                importedState = parsedFile.data;
+            } 
+            // FALL 3: Abwärtskompatibilität für alte Klartext-JSON-Dateien
+            else if (parsedFile.settings && parsedFile.income) {
+                importedState = parsedFile;
+            } 
+            else {
+                alert("Fehler: Unbekanntes oder beschädigtes Dateiformat.");
+                return;
+            }
+
+            if (!importedState || typeof importedState !== 'object') {
+                alert("Fehler: Ungültige Datenstruktur im Backup.");
+                return;
+            }
+
+            // Daten in den App-Speicher übernehmen
+            state = importedState;
+            await saveToLocalStorage();
+            loadStateIntoInputs(); 
+            syncOwnerDropdowns(); 
+            applyDynamicNames(); 
+            renderAllTables(); 
+            renderSalaryHistoryTables(); 
+            renderDepotHistoryTable(); 
+            renderAccountTrackerTable(); 
+            updateCalculationsAndCharts(); 
+            renderSalaryChart(); 
+            updateDepotTimestamp();
+
+            // Lockscreen ausblenden, falls noch aktiv
+            document.getElementById('lock-screen')?.classList.add('hidden');
+            document.getElementById('app-wrapper')?.classList.remove('hidden');
+
+            alert("Backup erfolgreich importiert und Daten wiederhergestellt!");
+
+        } catch(err) { 
+            console.error(err);
+            alert("Fehler beim Einlesen der Backup-Datei."); 
+        }
+    };
+    reader.readAsText(file);
+    
+    // File-Input zurücksetzen
+    event.target.value = '';
+}
       // EXPORT-FUNKTIONEN DOKUMENTIERT & VOLLSTÄNDIG
       function exportDepotCSV() {
           let csvContent = "data:text/csv;charset=utf-8,Typ;Bezeichnung;ISIN_WKN;Bank/Broker;Ticker;Zuordnung;Stueckzahl;Kaufkurs;Akt. Kurs;Gesamtwert\n";
