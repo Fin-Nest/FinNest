@@ -1661,29 +1661,50 @@ async function getCurrentPrice(security) {
           if(el) { el.innerText = `(M: ${formatEuroDisplay(valH)} € | F: ${formatEuroDisplay(valW)} € | G: ${formatEuroDisplay(valB)} €)`; }
       }
 
-     window.addEventListener('DOMContentLoaded', () => {
+     /**
+ * Prüft, ob ein Daten-String verschlüsselt ist (CryptoJS oder Web Crypto API).
+ * @param {string} str - Der aus dem LocalStorage gelesene String
+ * @returns {boolean} True, wenn die Daten verschlüsselt sind
+ */
+function isEncryptedData(str) {
+    if (!str) return false;
+    // 1. Altes CryptoJS-Format
+    if (str.startsWith('U2Fsd')) return true;
+    
+    // 2. Neues Web Crypto API Format (Base64-JSON mit s, iv, c)
+    try {
+        const decoded = JSON.parse(atob(str));
+        return !!(decoded && decoded.s && decoded.iv && decoded.c);
+    } catch (e) {
+        return false;
+    }
+}
+
+// ==========================================
+// INITIALISIERUNG BEIM APP-START
+// ==========================================
+window.addEventListener('DOMContentLoaded', () => {
     const v11Data = localStorage.getItem('famfinanz_v11_state');
-    if (v11Data) {
-        if (v11Data.startsWith('U2Fsd')) { 
-            document.getElementById('lock-screen').classList.remove('hidden'); 
-        } else { 
-            parseAndLoadState(v11Data); 
-            document.getElementById('app-wrapper').classList.remove('hidden'); 
-            
-            // Erstes Zeichnen
-            triggerMobileChartRender();
-        }
+
+    if (v11Data && isEncryptedData(v11Data)) {
+        // Daten sind verschlüsselt -> Tresor-Sperrbildschirm anzeigen
+        document.getElementById('lock-screen').classList.remove('hidden');
+        document.getElementById('app-wrapper').classList.add('hidden');
+    } else if (v11Data) {
+        // Unverschlüsselte Bestandsdaten direkt laden
+        parseAndLoadState(v11Data); 
+        document.getElementById('app-wrapper').classList.remove('hidden'); 
+        triggerMobileChartRender();
     } else {
+        // Erststart ohne Daten
         parseAndLoadState(null); 
         document.getElementById('app-wrapper').classList.remove('hidden');
-
-        // Erstes Zeichnen ohne Daten
         triggerMobileChartRender();
     }
+
     updateEncryptionUI();
     lucide.createIcons();
 });
-
 // Sicheres Zeichnen & Anpassen für mobile Gerätegrößen
 function triggerMobileChartRender() {
     requestAnimationFrame(() => {
