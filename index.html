@@ -2199,7 +2199,13 @@ function handleNameChange() {
           });
           lucide.createIcons();
       }
-      function deleteSalaryEntry(owner, idx) { state.salaryHistory[owner].splice(idx, 1); saveToLocalStorage(); renderSalaryHistoryTables(); renderSalaryChart(); }
+      function deleteSalaryEntry(owner, idx) { 
+    if (!confirm("Möchtest du diesen Gehaltseintrag wirklich löschen?")) return;
+    state.salaryHistory[owner].splice(idx, 1); 
+    saveToLocalStorage(); 
+    renderSalaryHistoryTables(); 
+    renderSalaryChart(); 
+}
       function parseMMYYtoAbsolute(str) { if(!str || !str.trim()) return null; const p = str.trim().split('/'); if(p.length !== 2) return null; let m = parseInt(p[0], 10); let y = parseInt(p[1], 10); if(y < 100) y += 2000; return { month: m, year: y, abs: y * 12 + m }; }
       
       function renderSalaryChart() { 
@@ -2435,9 +2441,14 @@ if (configKey === 'depot') {
 }
       
       function handleTableDelete(path, index, configKey) { 
-          let target = state; path.forEach(p => target = target[p]); target.splice(index, 1); 
-          saveToLocalStorage(); renderGenericTable(configKey); updateCalculationsAndCharts(); 
-      }
+    if (!confirm("Möchtest du diesen Eintrag wirklich löschen?")) return;
+    let target = state; 
+    path.forEach(p => target = target[p]); 
+    target.splice(index, 1); 
+    saveToLocalStorage(); 
+    renderGenericTable(configKey); 
+    updateCalculationsAndCharts(); 
+}
 
       function openSellModal(index) {
           activeSellingAssetIndex = index;
@@ -2633,11 +2644,12 @@ if (configKey === 'depot') {
           renderAccountTrackerTable();
       }
 
-      function deleteTrackedAccount(index) {
-          state.accountTracker.splice(index, 1);
-          saveToLocalStorage();
-          renderAccountTrackerTable();
-      }
+      function deleteTrackedAccount(index) { 
+    if (!confirm("Möchtest du dieses Konto wirklich aus dem Tracker löschen?")) return;
+    state.accountTracker.splice(index, 1); 
+    saveToLocalStorage(); 
+    renderAccountTrackerTable(); 
+}
 
     // Globaler Sortierzustand für den Kontotracker
 let accountTrackerSortState = {
@@ -2922,7 +2934,12 @@ async function updateDepotPrices() {
       }
       
       function addImmoScenario() { state.immoPlanning.scenarios.push({ id: "sc_"+Date.now(), name: "Objekt", kaufpreis: 400000, finKosten: 2000, sonstigeKosten: 12000 }); saveToLocalStorage(); updateCalculationsAndCharts(); }
-      function deleteScenario(idx) { state.immoPlanning.scenarios.splice(idx,1); saveToLocalStorage(); updateCalculationsAndCharts(); }
+      function deleteScenario(idx) { 
+    if (!confirm("Möchtest du dieses Szenario wirklich löschen?")) return;
+    state.immoPlanning.scenarios.splice(idx,1); 
+    saveToLocalStorage(); 
+    updateCalculationsAndCharts(); 
+}
       function updateScenarioItem(idx, field, val) { state.immoPlanning.scenarios[idx][field] = val; saveToLocalStorage(); updateCalculationsAndCharts(); }
 
       function renderThSotiList() { 
@@ -2943,7 +2960,13 @@ async function updateDepotPrices() {
           lucide.createIcons();
       }
       function updateThSoti(idx, field, val) { state.immoPlanning.sondertilgungen[idx][field] = val; saveToLocalStorage(); updateThCalculations(); }
-      function deleteThSoti(idx) { state.immoPlanning.sondertilgungen.splice(idx, 1); saveToLocalStorage(); renderThSotiList(); updateThCalculations(); }
+     function deleteThSoti(idx) { 
+    if (!confirm("Möchtest du diese Sondertilgung wirklich löschen?")) return;
+    state.immoPlanning.sondertilgungen.splice(idx, 1); 
+    saveToLocalStorage(); 
+    renderThSotiList(); 
+    updateThCalculations(); 
+}
       function addThSoti() { state.immoPlanning.sondertilgungen.push({ id: "soti_"+Date.now(), type: "once", year: 1, value: 1000 }); saveToLocalStorage(); renderThSotiList(); updateThCalculations(); }
       
       function setThModus(modus) {
@@ -2975,7 +2998,12 @@ async function updateDepotPrices() {
           document.getElementById('ch-select').value = e.child; document.getElementById('ch-category').value = e.category; document.getElementById('ch-desc').value = e.desc; document.getElementById('ch-amount').value = formatEuroDisplay(e.amount); document.getElementById('ch-date').value = e.date || new Date().toISOString().split('T')[0];
           state.childExpenses.splice(idx, 1); saveToLocalStorage(); updateCalculationsAndCharts(); window.scrollTo(0, document.getElementById('ch-date').offsetTop - 50);
       }
-      function deleteChildExpense(id) { state.childExpenses = state.childExpenses.filter(e => e.id !== id); saveToLocalStorage(); updateCalculationsAndCharts(); }
+     function deleteChildExpense(id) { 
+    if (!confirm("Möchtest du diesen Posten wirklich löschen?")) return;
+    state.childExpenses = state.childExpenses.filter(e => e.id !== id); 
+    saveToLocalStorage(); 
+    updateCalculationsAndCharts(); 
+}
 
       function updateCalculationsAndCharts() {
           const fixedIncH = state.income.husbandAnnual / 12 + state.income.elterngeldHusbandAnnual / 12; const fixedIncW = state.income.wifeAnnual / 12 + state.income.elterngeldWifeAnnual / 12; const fixedIncB = (state.income.kindergeldAnnual / 12) + (state.income.otherAnnual / 12);
