@@ -1325,6 +1325,124 @@
   </div>
 
   <script>
+
+// ==========================================
+// NATIVE WEB CRYPTO ENGINE (AES-256-GCM + PBKDF2)
+// ==========================================
+
+/**
+ * Leitet aus dem Masterpasswort und einem Salt einen 256-Bit AES-GCM Schlüssel ab.
+ * @param {string} password - Das Klartext-Passwort
+ * @param {Uint8Array} salt - Ein zufälliges 16-Byte Salt
+ * @returns {Promise<CryptoKey>} Der abgeleitete Kryptoschlüssel
+ */
+async function deriveKeyFromPassword(password, salt) {
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+    );
+
+    return crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+}
+
+/**
+ * Verschlüsselt einen String mit dem Masterpasswort.
+ * @param {string} plainText - Die zu verschlüsselnden JSON-Daten
+ * @param {string} password - Das Masterpasswort
+ * @returns {Promise<string>} Base64-codierter String bestehend aus Salt, IV und Chiffre
+ */
+async function encryptWithWebCrypto(plainText, password) {
+    const encoder = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKeyFromPassword(password, salt);
+
+    const encryptedBuffer = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        key,
+        encoder.encode(plainText)
+    );
+
+    const payload = {
+        s: btoa(String.fromCharCode(...salt)),
+        iv: btoa(String.fromCharCode(...iv)),
+        c: btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer)))
+    };
+
+    return btoa(JSON.stringify(payload));
+}
+
+/**
+ * Entschlüsselt ein Base64-Paket mit dem Masterpasswort.
+ * @param {string} encryptedBase64Payload - Das Base64-Paket aus dem LocalStorage
+ * @param {string} password - Das Masterpasswort
+ * @returns {Promise<string>} Der entschlüsselte Klartext (JSON-String)
+ */
+async function decryptWithWebCrypto(encryptedBase64Payload, password) {
+    const decoder = new TextDecoder();
+    const payload = JSON.parse(atob(encryptedBase64Payload));
+
+    const salt = Uint8Array.from(atob(payload.s), char => char.charCodeAt(0));
+    const iv = Uint8Array.from(atob(payload.iv), char => char.charCodeAt(0));
+    const ciphertext = Uint8Array.from(atob(payload.c), char => char.charCodeAt(0));
+
+    const key = await deriveKeyFromPassword(password, salt);
+
+    const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
+        key,
+        ciphertext
+    );
+
+    return decoder.decode(decryptedBuffer);
+}
+
+/**
+ * Liest Daten ein und migriert alte CryptoJS-Tresore automatisch auf Web Crypto.
+ * @param {string} encryptedData - Der verschlüsselte String aus dem LocalStorage
+ * @param {string} password - Das eingegebene Masterpasswort
+ * @returns {Promise<string>} Der entschlüsselte JSON-Klartext
+ */
+async function smartDecrypt(encryptedData, password) {
+    if (!encryptedData) return null;
+
+    // 1. Erkennung alter CryptoJS-Daten (starten stets mit "U2Fsd")
+    if (encryptedData.startsWith('U2Fsd')) {
+        if (typeof CryptoJS === 'undefined') {
+            throw new Error("Altes Datenformat erkannt, aber CryptoJS-Bibliothek nicht geladen.");
+        }
+        const bytes = CryptoJS.AES.decrypt(encryptedData, password);
+        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+        
+        if (!decryptedStr) throw new Error("Entschlüsselung fehlgeschlagen.");
+
+        // 2. Automatisches Re-Encrypt im neuen Web Crypto Format
+        const newEncryptedData = await encryptWithWebCrypto(decryptedStr, password);
+        localStorage.setItem('famfinanz_v11_state', newEncryptedData);
+        console.log("FinNest-Daten erfolgreich auf Web Crypto API (AES-GCM) migriert!");
+        
+        return decryptedStr;
+    }
+
+    // 3. Standard-Pfad: Native Web Crypto Entschlüsselung
+    return await decryptWithWebCrypto(encryptedData, password);
+}
+    
     /**
  * Konvertiert Benutzereingaben sicher in eine Fließkommazahl.
  * Akzeptiert sowohl Komma (12,50) als auch Punkt (12.50) als Dezimaltrenner.
@@ -1581,21 +1699,20 @@ function triggerMobileChartRender() {
     });
 }
 
- function unlockApp() {
+async function unlockApp() {
     const pwdInput = document.getElementById('unlock-pwd').value; 
     const encryptedData = localStorage.getItem('famfinanz_v11_state'); 
     const errorMsg = document.getElementById('unlock-error');
     if(!encryptedData) return;
     
     try {
-        const bytes = CryptoJS.AES.decrypt(encryptedData, pwdInput); 
-        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+        // Nutzen des Smart-Decrypt-Wrappers
+        const decryptedStr = await smartDecrypt(encryptedData, pwdInput);
         
         if (!decryptedStr || decryptedStr.length === 0) {
             throw new Error("Entschlüsselung fehlgeschlagen.");
         }
         
-        // Prüfen, ob das Ergebnis valides JSON ist
         const parsedState = JSON.parse(decryptedStr);
         if (!parsedState || typeof parsedState !== 'object') {
             throw new Error("Ungültige Datenstruktur.");
@@ -1621,7 +1738,6 @@ function triggerMobileChartRender() {
         errorMsg.classList.remove('hidden'); 
     }
 }
-
       // PUNKT 6: PASSWORT ZURÜCKSETZEN VIA SICHERHEITSFRAGE
       function showResetPasswordModal() {
           const secQuestion = localStorage.getItem('famfinanz_sec_question');
@@ -1639,7 +1755,7 @@ function triggerMobileChartRender() {
           document.getElementById('pwd-standard-form').classList.remove('hidden');
       }
 
-     function confirmPasswordReset() {
+    async function confirmPasswordReset() {
     const answerInput = document.getElementById('reset-answer-input').value.trim().toLowerCase();
     const newPwd = document.getElementById('reset-new-pwd').value;
     const errorEl = document.getElementById('reset-error');
@@ -1658,37 +1774,25 @@ function triggerMobileChartRender() {
     }
 
     try {
-        const payload = JSON.parse(rawRecovery);
-        const salt = CryptoJS.enc.Hex.parse(payload.salt);
-        
-        // Gleiche Schlüsselableitung durchführen
-        const derivedKey = CryptoJS.PBKDF2(answerInput, salt, {
-            keySize: 256 / 32,
-            iterations: 10000
-        });
+        // 1. Altes Masterpasswort mithilfe der Geheimantwort entschlüsseln
+        const oldMasterPwd = await smartDecrypt(rawRecovery, answerInput);
 
-        const bytes = CryptoJS.AES.decrypt(payload.data, derivedKey.toString());
-        const oldMasterPwd = bytes.toString(CryptoJS.enc.Utf8);
+        if (!oldMasterPwd) throw new Error("Antwort falsch.");
 
-        if (!oldMasterPwd || oldMasterPwd.length === 0) {
-            throw new Error("Antwort falsch");
-        }
-
-        // Tresor mit dem neuen Passwort neu verschlüsseln
+        // 2. Tresor mit altem Passwort entschlüsseln
         const encryptedState = localStorage.getItem('famfinanz_v11_state');
-        const stateBytes = CryptoJS.AES.decrypt(encryptedState, oldMasterPwd);
-        const rawStateJson = stateBytes.toString(CryptoJS.enc.Utf8);
+        const rawStateJson = await smartDecrypt(encryptedState, oldMasterPwd);
 
         if (!rawStateJson) throw new Error("Fehler beim Dekodieren der Finanzdaten.");
 
+        // 3. Tresor mit neuem Passwort neu verschlüsseln
         window.appPassword = newPwd;
-        const newEncryptedState = CryptoJS.AES.encrypt(rawStateJson, newPwd).toString();
+        const newEncryptedState = await encryptWithWebCrypto(rawStateJson, newPwd);
         localStorage.setItem('famfinanz_v11_state', newEncryptedState);
 
-        // Recovery Payload für das neue Passwort aktualisieren
-        const newEncryptedRecovery = CryptoJS.AES.encrypt(newPwd, derivedKey.toString()).toString();
-        const newPayload = JSON.stringify({ salt: payload.salt, data: newEncryptedRecovery });
-        localStorage.setItem('famfinanz_sec_recovery', newPayload);
+        // 4. Recovery-Payload für die Sicherheitsfrage auf das neue Passwort aktualisieren
+        const newEncryptedRecovery = await encryptWithWebCrypto(newPwd, answerInput);
+        localStorage.setItem('famfinanz_sec_recovery', newEncryptedRecovery);
 
         alert("Dein Masterpasswort wurde erfolgreich zurückgesetzt!");
         hideResetPasswordModal();
@@ -1698,11 +1802,10 @@ function triggerMobileChartRender() {
         parseAndLoadState(rawStateJson);
         updateEncryptionUI();
     } catch (err) {
-        errorEl.innerText = "Antwort auf die Sicherheitsfrage ist inkorrekt.";
+        errorEl.innerText = "Antwort auf die Sicherheitsfrage ist inkorrekt oder Daten beschädigt.";
         errorEl.classList.remove('hidden');
     }
 }
-
 // Speichert den aktuellen Sortierzustand für den Tagesgeldtracker
 let tagesgeldSortState = {
   column: 'name',  // Standard-Spalte für die Sortierung
@@ -1846,49 +1949,49 @@ function parseAndLoadState(jsonStr) {
   updateDepotTimestamp();
   renderDepotPersonPerformance();
 }
-      function saveToLocalStorage() { 
-          const dataStr = JSON.stringify(state);
-          if (window.appPassword) { localStorage.setItem('famfinanz_v11_state', CryptoJS.AES.encrypt(dataStr, window.appPassword).toString());
-          } else { localStorage.setItem('famfinanz_v11_state', dataStr); }
-      }
-
-      function setMasterPassword() {
-          const p1 = document.getElementById('set-pwd-1').value; const p2 = document.getElementById('set-pwd-2').value; const msg = document.getElementById('pwd-msg');
-          const secQ = document.getElementById('set-sec-question').value.trim();
-          const secA = document.getElementById('set-sec-answer').value.trim().toLowerCase();
-
-          if(!p1 || !p2) { msg.textContent = "Bitte beide Passwortfelder ausfüllen."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
-          if(p1 !== p2) { msg.textContent = "Passwörter stimmen nicht überein."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
-
-          window.appPassword = p1; saveToLocalStorage();
-
-          // SICHERE VARIANTE mit PBKDF2 Schlüsselableitung:
-if (secQ && secA) {
-    localStorage.setItem('famfinanz_sec_question', secQ);
-    
-    // Erzeuge einen zufälligen Salt
-    const salt = CryptoJS.lib.WordArray.random(128 / 8);
-    
-    // Leite einen starken Schlüssel aus der Antwort ab (10.000 Iterationen)
-    const derivedKey = CryptoJS.PBKDF2(secA, salt, {
-        keySize: 256 / 32,
-        iterations: 10000
-    });
-    
-    const encRecovery = CryptoJS.AES.encrypt(p1, derivedKey.toString()).toString();
-    
-    // Speichere Salt und verschlüsselten Key zusammen
-    const recoveryPayload = JSON.stringify({
-        salt: salt.toString(),
-        data: encRecovery
-    });
-    
-    localStorage.setItem('famfinanz_sec_recovery', recoveryPayload);
+      async function saveToLocalStorage() { 
+    const dataStr = JSON.stringify(state);
+    if (window.appPassword) { 
+        try {
+            const encryptedData = await encryptWithWebCrypto(dataStr, window.appPassword);
+            localStorage.setItem('famfinanz_v11_state', encryptedData);
+        } catch (e) {
+            console.error("Verschlüsselungsfehler beim Speichern:", e);
+        }
+    } else { 
+        localStorage.setItem('famfinanz_v11_state', dataStr); 
+    }
 }
 
-          document.getElementById('set-pwd-1').value = ''; document.getElementById('set-pwd-2').value = '';
-          msg.textContent = "Masterpasswort & Sicherheitsfrage erfolgreich hinterlegt."; msg.className = "text-xs font-medium mt-1 text-emerald-600"; updateEncryptionUI();
-      }
+      async function setMasterPassword() {
+    const p1 = document.getElementById('set-pwd-1').value; 
+    const p2 = document.getElementById('set-pwd-2').value; 
+    const msg = document.getElementById('pwd-msg');
+    const secQ = document.getElementById('set-sec-question').value.trim();
+    const secA = document.getElementById('set-sec-answer').value.trim().toLowerCase();
+
+    if(!p1 || !p2) { msg.textContent = "Bitte beide Passwortfelder ausfüllen."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
+    if(p1 !== p2) { msg.textContent = "Passwörter stimmen nicht überein."; msg.className = "text-xs font-medium mt-1 text-rose-500"; return; }
+
+    window.appPassword = p1; 
+    await saveToLocalStorage();
+
+    if (secQ && secA) {
+        localStorage.setItem('famfinanz_sec_question', secQ);
+        try {
+            const encRecovery = await encryptWithWebCrypto(p1, secA);
+            localStorage.setItem('famfinanz_sec_recovery', encRecovery);
+        } catch (e) {
+            console.error("Fehler beim Einrichten der Sicherheitsfrage:", e);
+        }
+    }
+
+    document.getElementById('set-pwd-1').value = ''; 
+    document.getElementById('set-pwd-2').value = '';
+    msg.textContent = "Masterpasswort & Sicherheitsfrage erfolgreich hinterlegt."; 
+    msg.className = "text-xs font-medium mt-1 text-emerald-600"; 
+    updateEncryptionUI();
+}
 
       function removeMasterPassword() {
           if(confirm("Bist du sicher? Deine Daten werden unverschlüsselt im Browser abgelegt.")) {
