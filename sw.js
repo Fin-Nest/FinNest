@@ -1,5 +1,5 @@
 // sw.js (Optimierte Version mit Stale-While-Revalidate für Auto-Updates)
-const CACHE_NAME = 'finnest-v7'; // WICHTIG: Bei jedem Code-Release hier auf v7, v8 etc. erhöhen!
+const CACHE_NAME = 'finnest-v8'; // WICHTIG: Bei jedem Code-Release hier auf v7, v8 etc. erhöhen!
 
 const ASSETS_TO_CACHE = [
   './',
